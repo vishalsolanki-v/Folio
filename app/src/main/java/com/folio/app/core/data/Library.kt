@@ -35,6 +35,7 @@ class Library(
             file.copy(
                 lastOpenedAt = clock(),
                 pinned = existing?.pinned ?: file.pinned,
+                sourceApp = file.sourceApp ?: existing?.sourceApp,
                 localCopyPath = file.localCopyPath ?: existing?.localCopyPath,
                 persisted = file.persisted || existing?.persisted == true,
             ),

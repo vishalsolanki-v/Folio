@@ -40,6 +40,13 @@ object UriAccess {
         }.isSuccess
     }
 
+    /** True when we hold a persisted read grant for exactly this URI. */
+    fun isPersisted(context: Context, uri: Uri): Boolean =
+        context.contentResolver.persistedUriPermissions.any { it.uri == uri && it.isReadPermission }
+
+    /** Document URIs inside a folder the user added: readable through the folder's grant. */
+    fun isInsideTree(uri: Uri): Boolean = uri.scheme == ContentResolver.SCHEME_CONTENT && uri.pathSegments.firstOrNull() == "tree"
+
     /** Gives back a grant taken by [persist]. Safe to call when nothing is held. */
     fun release(context: Context, uri: Uri) {
         val resolver = context.contentResolver
