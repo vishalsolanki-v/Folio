@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Line illustration of an open notebook for empty states. Monochrome; tinted at use site. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="160dp"
+    android:height="120dp"
+    android:viewportWidth="160"
+    android:viewportHeight="120">
+    <!-- left page -->
+    <path
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="2"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round"
+        android:pathData="M80,30 C66,22 46,20 22,24 L22,96 C46,92 66,94 80,102 Z" />
+    <!-- right page -->
+    <path
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="2"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round"
+        android:pathData="M80,30 C94,22 114,20 138,24 L138,96 C114,92 94,94 80,102 Z" />
+    <!-- text lines -->
+    <path
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M34,42 L66,44 M34,54 L66,56 M34,66 L58,67 M94,44 L126,42 M94,56 L126,54 M94,67 L114,66" />
+    <!-- base shadow -->
+    <path
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.5"
+        android:pathData="M30,110 L130,110" />
+</vector>

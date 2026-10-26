@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.IntentCompat
+import com.folio.app.core.designsystem.FolioTheme
 
 /** Entry point for "Open with" and "Share". M0 only shows what it received; the Viewer replaces this in M6. */
 class ExternalOpenActivity : ComponentActivity() {
@@ -24,7 +25,7 @@ class ExternalOpenActivity : ComponentActivity() {
         enableEdgeToEdge()
         val lines = describe(intent)
         setContent {
-            MaterialTheme {
+            FolioTheme {
                 Surface(Modifier.fillMaxSize()) {
                     Column(Modifier.safeDrawingPadding().padding(20.dp)) {
                         lines.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }

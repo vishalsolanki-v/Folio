@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols Outlined, weight 300 (Apache-2.0). Tinted at use site. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:autoMirrored="false"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateY="960">
+        <path android:fillColor="@android:color/white" android:pathData="M401.15-143.85q-57.75 0-98.87-41.12-41.12-41.13-41.12-98.88 0-57.75 41.12-98.87 41.12-41.12 98.87-41.12 23 0 43.08 6.84 20.08 6.85 36.92 20.54v-419.69h217.69v130.76H541.15v401.54q0 57.75-41.12 98.88-41.13 41.12-98.88 41.12Z" />
+    </group>
+</vector>

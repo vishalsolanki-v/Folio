@@ -11,6 +11,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.folio.app.core.designsystem.FolioTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,7 +19,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // Placeholder until Home lands in M5.
         setContent {
-            MaterialTheme {
+            FolioTheme {
                 Surface(Modifier.fillMaxSize()) {
                     Box(contentAlignment = Alignment.Center) {
                         Text("Folio", style = MaterialTheme.typography.headlineMedium)
