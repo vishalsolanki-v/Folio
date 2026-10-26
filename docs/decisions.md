@@ -20,3 +20,6 @@ One line each: what, why.
 - M3: vcf and ics map to the TEXT family (readable as text) until their v1.1 viewers; other v1.1 formats map to UNKNOWN with proper names and badges.
 - M3: `UriAccess.canWrite` reads `Document.COLUMN_FLAGS` directly instead of adding androidx.documentfile.
 - M3: The mammoth transform is not requested on unit-test classpaths (it dropped the app's own classes there); JVM tests don't need it.
+- M4: Recents/folders logic lives in `core/data/Library.kt` (one class, because the persisted-grant budget spans recents and folders). It trims to 500 rows (pinned never trimmed), keeps grants under 100 (API < 30) / 450, releases grants and deletes private copies of dropped rows, and evicts copies (pinned kept) after each change. Permission release is injected so the rules are tested on-device with an in-memory Room DB.
+- M4: Room schema is exported to `app/schemas` (version 1) so future migrations can be tested.
+- M4: Settings read falls back to defaults on a corrupt preferences file and clamps editor font size to 12–20 sp; unknown stored enum names fall back to defaults.

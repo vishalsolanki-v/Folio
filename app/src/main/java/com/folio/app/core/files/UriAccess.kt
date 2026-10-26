@@ -39,6 +39,16 @@ object UriAccess {
             resolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }.isSuccess
     }
+
+    /** Gives back a grant taken by [persist]. Safe to call when nothing is held. */
+    fun release(context: Context, uri: Uri) {
+        val resolver = context.contentResolver
+        runCatching {
+            resolver.releasePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        }.recoverCatching {
+            resolver.releasePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
 }
 
 /** [SaveTarget] backed by a content URI. */
