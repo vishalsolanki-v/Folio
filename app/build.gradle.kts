@@ -21,6 +21,10 @@ abstract class StripMammothSimpleSax : TransformAction<TransformParameters.None>
 
     override fun transform(outputs: TransformOutputs) {
         val jar = input.get().asFile
+        if (jar.isDirectory) {
+            outputs.dir(input)
+            return
+        }
         if (!jar.name.startsWith("mammoth-")) {
             outputs.file(input)
             return
@@ -52,7 +56,8 @@ dependencies {
 }
 
 configurations.configureEach {
-    if (isCanBeResolved && name.endsWith("RuntimeClasspath")) {
+    // Only dexed classpaths need the strip. Requesting it on JVM unit-test classpaths drops the app's own classes.
+    if (isCanBeResolved && name.endsWith("RuntimeClasspath") && !name.contains("UnitTest")) {
         attributes.attribute(mammothPatched, true)
     }
 }

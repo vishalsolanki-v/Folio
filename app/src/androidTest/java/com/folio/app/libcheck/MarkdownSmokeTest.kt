@@ -18,7 +18,7 @@ class MarkdownSmokeTest {
         compose.setContent {
             MaterialTheme { Markdown("# Folio heading\n\n- first item\n- second item") }
         }
-        compose.onNodeWithText("Folio heading", substring = true).assertExists()
-        compose.onNodeWithText("second item", substring = true).assertExists()
+        compose.onNodeWithText("Folio heading", substring = true, useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("second item", substring = true, useUnmergedTree = true).assertExists()
     }
 }

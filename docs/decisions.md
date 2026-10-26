@@ -13,3 +13,10 @@ One line each: what, why.
 - M2: 38 Material Symbols (weight 300) converted from SVG to vector drawables by a small script; push_pin only exists in the older 24-unit format, so it uses a 24 viewport.
 - M2: The design catalog is a debug-only launcher activity (`src/debug`, "Folio catalog"; `adb shell am start -n com.folio.app/.debug.DesignCatalogActivity --es theme Dark`). M5 should also link it from Settings in debug builds.
 - M2: FindBar has `autoFocus` (default true) so the viewer focuses it immediately; the catalog turns it off.
+- M3: `TextCodec` does not normalise line endings (plan §4.5 said normalise to `\n`). Text keeps its original separators, so an unedited decode→encode is byte-identical even for mixed endings; `lineSeparator` is just the default for new lines. M7 must confirm Sora keeps per-line separators (if not, normalise only when the file has a single separator style). `TextDoc` has no `endsWithNewline` (the text itself carries it).
+- M3: `MimeSniffer.detect` owns the whole priority order (magic > ZIP peek > extension > intent MIME > text heuristic); `FileResolver` just calls it. A truncated or unreadable ZIP falls back to a ZIP-based extension (docx, xlsx...) when present. Generic MIME types (text/plain, octet-stream) never override a known extension.
+- M3: `FileSaver` keeps new content in memory (editing is capped at 5 MB) instead of a `.new` file. It refuses to overwrite when the original is over 50 MB (it can't back it up), and keeps the `.bak` if restoring fails, so the original is never lost. Tested with failing fakes and on a real FileProvider with mode "wt".
+- M3: `ZipSafety.Budget` is `startEntry(compressedSize)` + `written(chunk)` so it can stop a bomb mid-write.
+- M3: vcf and ics map to the TEXT family (readable as text) until their v1.1 viewers; other v1.1 formats map to UNKNOWN with proper names and badges.
+- M3: `UriAccess.canWrite` reads `Document.COLUMN_FLAGS` directly instead of adding androidx.documentfile.
+- M3: The mammoth transform is not requested on unit-test classpaths (it dropped the app's own classes there); JVM tests don't need it.
