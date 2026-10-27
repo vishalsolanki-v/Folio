@@ -54,6 +54,17 @@ class LibraryTest {
         assertTrue(rows.first().pinned)
     }
 
+    @Test fun sameFileUnderAnotherUriReplacesOldRowAndKeepsPin() = runTest {
+        val lib = library()
+        lib.recordOpen(recent("content://downloads/msf:24", persisted = true).copy(name = "Invoice.pdf"))
+        lib.setPinned("content://downloads/msf:24", true)
+        lib.recordOpen(recent("content://downloads/raw:Invoice").copy(name = "Invoice.pdf"))
+        val rows = lib.observeRecents().first()
+        assertEquals(listOf("content://downloads/raw:Invoice"), rows.map { it.uri })
+        assertTrue(rows.single().pinned)
+        assertEquals(listOf("content://downloads/msf:24"), released)
+    }
+
     @Test fun trimsOldestUnpinnedAndCleansUp() = runTest {
         val lib = library(maxRows = 3)
         val copyPath = copies.store("old", "old.pdf", "x".byteInputStream())!!.path

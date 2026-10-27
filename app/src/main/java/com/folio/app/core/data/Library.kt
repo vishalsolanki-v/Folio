@@ -31,10 +31,14 @@ class Library(
     /** Records that [file] was just opened. Keeps its pinned state and any earlier copy or grant. */
     suspend fun recordOpen(file: RecentFile) {
         val existing = recents.get(file.uri)
+        // One file can arrive under several URIs (e.g. two forms from the Downloads provider). Keep only the newest
+        // row; it inherits a pin. shortcut: matches on name + size + type, so two distinct identical-looking files share a row.
+        val duplicates = if (file.sizeBytes >= 0) recents.sameFileOtherUri(file.uri, file.name, file.sizeBytes, file.mime) else emptyList()
+        duplicates.forEach { forget(it) }
         recents.upsert(
             file.copy(
                 lastOpenedAt = clock(),
-                pinned = existing?.pinned ?: file.pinned,
+                pinned = existing?.pinned ?: (file.pinned || duplicates.any { it.pinned }),
                 sourceApp = file.sourceApp ?: existing?.sourceApp,
                 localCopyPath = file.localCopyPath ?: existing?.localCopyPath,
                 persisted = file.persisted || existing?.persisted == true,

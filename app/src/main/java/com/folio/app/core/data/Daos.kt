@@ -25,6 +25,10 @@ interface RecentDao {
     @Query("DELETE FROM recent WHERE uri = :uri")
     suspend fun delete(uri: String)
 
+    /** Rows that look like the same file reached through another URI. */
+    @Query("SELECT * FROM recent WHERE name = :name AND sizeBytes = :sizeBytes AND mime = :mime AND uri != :uri")
+    suspend fun sameFileOtherUri(uri: String, name: String, sizeBytes: Long, mime: String): List<RecentFile>
+
     @Query("SELECT * FROM recent")
     suspend fun all(): List<RecentFile>
 

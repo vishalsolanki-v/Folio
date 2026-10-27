@@ -14,7 +14,7 @@ import java.io.InputStream
 
 /** Turns a URI from any source into an [OpenedFile] (plan §4.3). Reads only the first 4 KB (plus ZIP entry names). */
 class FileResolver(private val context: Context) {
-    suspend fun resolve(uri: Uri, intentMime: String? = null, referrerHost: String? = null): Result<OpenedFile> =
+    suspend fun resolve(uri: Uri, intentMime: String? = null, source: String? = null): Result<OpenedFile> =
         withContext(Dispatchers.IO) {
             runCatching {
                 val resolver = context.contentResolver
@@ -32,7 +32,7 @@ class FileResolver(private val context: Context) {
                     family = FormatInfo.describe(mime, extension).family,
                     sizeBytes = size,
                     writable = UriAccess.canWrite(context, uri),
-                    sourceApp = SourceApps.label(referrerHost),
+                    sourceApp = SourceApps.label(source),
                 )
             }
         }

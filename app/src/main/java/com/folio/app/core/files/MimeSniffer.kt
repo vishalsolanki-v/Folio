@@ -128,7 +128,7 @@ object MimeSniffer {
         extension.takeIf { it in setOf("docx", "xlsx", "pptx", "epub", "apk", "odt", "ods", "odp") }?.let { FormatInfo.forExtension(it)?.mime }
 
     /** No NUL bytes (unless a UTF-16 BOM says otherwise) and almost all of it decodes as UTF-8 text. */
-    private fun looksLikeText(h: ByteArray): Boolean {
+    fun looksLikeText(h: ByteArray): Boolean {
         if (h.isEmpty()) return false
         if (h.size >= 2 && ((h[0] == 0xFF.toByte() && h[1] == 0xFE.toByte()) || (h[0] == 0xFE.toByte() && h[1] == 0xFF.toByte()))) return true
         if (h.any { it == 0.toByte() }) return false

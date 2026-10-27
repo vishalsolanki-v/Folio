@@ -1,48 +1,190 @@
 package com.folio.app.feature.viewer
 
-import android.text.format.Formatter
+import android.app.Activity
+import android.print.PrintManager
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.folio.app.R
 import com.folio.app.appContainer
-import com.folio.app.core.designsystem.components.EmptyState
+import com.folio.app.core.designsystem.Spacing
 import com.folio.app.core.designsystem.components.ErrorState
+import com.folio.app.core.designsystem.components.FindBar
+import com.folio.app.core.designsystem.components.FloatingPill
 import com.folio.app.core.designsystem.components.FolioTopBar
+import com.folio.app.core.designsystem.components.IconAction
 import com.folio.app.core.designsystem.components.LoadingSkeleton
 import com.folio.app.core.designsystem.components.PillButton
 import com.folio.app.core.designsystem.components.PillStyle
-import com.folio.app.core.model.FormatInfo
+import com.folio.app.core.files.Sharing
+import com.folio.app.core.model.OpenedFile
+import com.folio.app.core.viewer.FormatViewer
+import com.folio.app.core.viewer.LocalViewerActions
+import com.folio.app.core.viewer.ViewerActions
+import com.folio.app.core.viewer.ViewerState
+import com.folio.app.navigation.Viewer
 
-/** M5 placeholder: resolves and records the file. M6 replaces the body with the real viewer shell. */
+private enum class ViewerSheet { More, Info }
+
+/** One screen for every format (plan §2.3): top bar or find bar, the format's content, page and edit pills, sheets. */
 @Composable
-fun ViewerScreen(onBack: () -> Unit) {
+fun ViewerScreen(onBack: () -> Unit, onEdit: (String) -> Unit, onOpen: (Viewer) -> Unit) {
     val container = appContainer()
     val vm: ViewerViewModel = viewModel { ViewerViewModel(container, createSavedStateHandle()) }
-    val state by vm.state.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val ready = state as? ViewerUiState.Ready
+    val ui by vm.state.collectAsStateWithLifecycle()
 
-    Scaffold(topBar = { FolioTopBar(ready?.file?.name.orEmpty(), onBack = onBack) }) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            when (val s = state) {
-                ViewerUiState.Loading -> LoadingSkeleton()
-                ViewerUiState.NoLongerAvailable -> ErrorState("This file is no longer available.") {
-                    PillButton("Go back", onBack, style = PillStyle.Tonal)
-                }
-                is ViewerUiState.Ready -> {
-                    val format = FormatInfo.describe(s.file.mime, s.file.extension)
-                    val size = if (s.file.sizeBytes >= 0) Formatter.formatShortFileSize(context, s.file.sizeBytes) else "Unknown size"
-                    EmptyState(format.friendlyName, "$size · Previews arrive in the next update.")
-                }
+    when (val s = ui) {
+        ViewerUiState.Loading -> Column(Modifier.fillMaxSize()) {
+            FolioTopBar("", onBack = onBack)
+            LoadingSkeleton()
+        }
+        is ViewerUiState.Unavailable -> Column(Modifier.fillMaxSize()) {
+            FolioTopBar("", onBack = onBack)
+            ErrorState(s.message) {
+                if (vm.route.record) PillButton("Remove from recents", { vm.removeFromRecents(onBack) }, style = PillStyle.Tonal)
+                PillButton("Go back", onBack, style = PillStyle.Outline)
             }
         }
+        is ViewerUiState.Ready -> ReadyViewer(vm, s.file, s.viewer, onBack, onEdit, onOpen)
+    }
+}
+
+@Composable
+private fun ReadyViewer(
+    vm: ViewerViewModel,
+    file: OpenedFile,
+    viewer: FormatViewer,
+    onBack: () -> Unit,
+    onEdit: (String) -> Unit,
+    onOpen: (Viewer) -> Unit,
+) {
+    val context = LocalContext.current
+    val state = vm.viewerState
+    val pinned by vm.pinned.collectAsStateWithLifecycle()
+    var finding by rememberSaveable { mutableStateOf(false) }
+    var sheet by rememberSaveable { mutableStateOf<ViewerSheet?>(null) }
+    var pageDialog by rememberSaveable { mutableStateOf(false) }
+    val printJob = remember(viewer, file) { viewer.printJob(context, file) }
+
+    fun closeFind() {
+        finding = false
+        state.query = ""
+    }
+    BackHandler(enabled = finding, onBack = ::closeFind)
+    SystemBarsHidden(state.immersive)
+
+    val actions = remember(file) {
+        ViewerActions(
+            openWithAnotherApp = { Sharing.openWith(context, file.uri, file.mime) },
+            showInfo = { sheet = ViewerSheet.Info },
+            openAsText = if (vm.canOpenAsText) ({ onOpen(vm.route.copy(asText = true, record = false)) }) else null,
+        )
+    }
+
+    CompositionLocalProvider(LocalViewerActions provides actions) {
+        Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
+            AnimatedVisibility(!state.immersive, enter = fadeIn(tween(200)), exit = fadeOut(tween(200))) {
+                if (finding) {
+                    FindBar(
+                        query = state.query,
+                        onQueryChange = { state.query = it; state.matchIndex = 0 },
+                        matchIndex = state.matchIndex,
+                        matchCount = state.matchCount,
+                        onPrevious = { if (state.matchCount > 0) state.matchIndex = (state.matchIndex - 1 + state.matchCount) % state.matchCount },
+                        onNext = { if (state.matchCount > 0) state.matchIndex = (state.matchIndex + 1) % state.matchCount },
+                        onClose = ::closeFind,
+                        modifier = Modifier.statusBarsPadding(),
+                    )
+                } else {
+                    FolioTopBar(file.name, onBack = onBack, onTitleClick = { sheet = ViewerSheet.Info }) {
+                        if (viewer.supportsSearch) IconAction(R.drawable.ic_search, "Find in file", { finding = true })
+                        IconAction(R.drawable.ic_more_vert, "More options", { sheet = ViewerSheet.More })
+                    }
+                }
+            }
+            Box(Modifier.weight(1f)) {
+                viewer.Content(file, state, onTap = { state.immersive = !state.immersive }, modifier = Modifier.fillMaxSize())
+                ViewerPills(state, canEdit = viewer.canEdit(file), onPage = { pageDialog = true }, onEdit = { onEdit(vm.route.uri) })
+            }
+        }
+    }
+
+    when (sheet) {
+        ViewerSheet.More -> MoreSheet(
+            file = file,
+            paper = state.paper.takeIf { viewer.supportsPaper },
+            pinned = pinned.takeIf { vm.route.record },
+            canPrint = printJob != null,
+            onShare = { Sharing.share(context, file.uri, file.mime, file.name) },
+            onOpenWith = actions.openWithAnotherApp,
+            onPrint = { printJob?.let { context.getSystemService(PrintManager::class.java).print(file.name, it, null) } },
+            onPaper = { state.paper = it },
+            onTogglePin = vm::togglePin,
+            onInfo = { sheet = ViewerSheet.Info },
+            onDismiss = { if (sheet == ViewerSheet.More) sheet = null },
+        )
+        ViewerSheet.Info -> FileInfoSheet(file, { vm.lastModified(file) }, state.infoExtras, onDismiss = { sheet = null })
+        null -> Unit
+    }
+    val label = state.pageLabel
+    if (pageDialog && label != null) PageJumpDialog(label, onJump = { state.jumpToPage = it }, onDismiss = { pageDialog = false })
+}
+
+@Composable
+private fun BoxScope.ViewerPills(
+    state: ViewerState,
+    canEdit: Boolean,
+    onPage: () -> Unit,
+    onEdit: () -> Unit,
+) {
+    val label = state.pageLabel
+    val pillModifier = Modifier.navigationBarsPadding().padding(Spacing.lg)
+    AnimatedVisibility(!state.immersive && label != null, Modifier.align(Alignment.BottomStart), enter = fadeIn(), exit = fadeOut()) {
+        FloatingPill(label.orEmpty(), onPage, pillModifier)
+    }
+    AnimatedVisibility(!state.immersive && canEdit, Modifier.align(Alignment.BottomEnd), enter = fadeIn(), exit = fadeOut()) {
+        FloatingPill("Edit", onEdit, pillModifier, icon = R.drawable.ic_edit)
+    }
+}
+
+/** Immersive reading: hide status and navigation bars; a swipe from the edge shows them briefly. */
+@Composable
+private fun SystemBarsHidden(hidden: Boolean) {
+    val view = LocalView.current
+    DisposableEffect(hidden) {
+        val window = (view.context as? Activity)?.window
+        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+        controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        if (hidden) controller?.hide(WindowInsetsCompat.Type.systemBars()) else controller?.show(WindowInsetsCompat.Type.systemBars())
+        onDispose { controller?.show(WindowInsetsCompat.Type.systemBars()) }
     }
 }

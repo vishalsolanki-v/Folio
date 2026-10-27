@@ -14,10 +14,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.folio.app.feature.folder.FolderScreen
 import com.folio.app.feature.home.HomeScreen
 import com.folio.app.feature.settings.LicensesScreen
 import com.folio.app.feature.settings.SettingsScreen
+import com.folio.app.feature.viewer.SharedFilesScreen
 import com.folio.app.feature.viewer.ViewerScreen
 
 @Composable
@@ -56,7 +58,10 @@ fun FolioNavHost(
                 onFolderRemoved = { navController.popBackStack(Home, inclusive = false) },
             )
         }
-        composable<Viewer> { ViewerScreen(onBack = ::back) }
+        composable<Viewer> {
+            ViewerScreen(onBack = ::back, onEdit = { navController.navigate(Editor(it)) }, onOpen = { navController.navigate(it) })
+        }
+        composable<SharedFiles> { entry -> SharedFilesScreen(entry.toRoute(), onBack = ::back, onOpen = { navController.navigate(it) }) }
         composable<Settings> { SettingsScreen(onBack = ::back, onOpenLicenses = { navController.navigate(Licenses) }) }
         composable<Licenses> { LicensesScreen(onBack = ::back) }
     }

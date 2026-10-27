@@ -1,6 +1,7 @@
 package com.folio.app.core.files
 
 import android.content.ClipData
+import android.content.ComponentName
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
@@ -23,6 +24,15 @@ object Sharing {
             copy != null && copy.exists() -> Uri.fromFile(copy)
             else -> null
         }
+    }
+
+    /** System chooser for viewing [uri] in another app; Folio's own entry points are left out. */
+    fun openWith(context: Context, uri: Uri, mime: String) {
+        val out = outgoingUri(context, uri)
+        val view = Intent(Intent.ACTION_VIEW).setDataAndType(out, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val ours = arrayOf("com.folio.app.MainActivity", "com.folio.app.ExternalOpenActivity").map { ComponentName(context, it) }
+        val chooser = Intent.createChooser(view, null).putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS, ours.toTypedArray())
+        context.startActivity(chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
     fun share(context: Context, uri: Uri, mime: String, name: String) {

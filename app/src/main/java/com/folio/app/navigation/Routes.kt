@@ -8,7 +8,21 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class Folder(val treeUri: String, val docId: String, val title: String)
 
-@Serializable data class Viewer(val uri: String, val mimeHint: String? = null)
+/**
+ * @param source package of the app that sent the file (Activity.referrer), for the "From WhatsApp" label
+ * @param record false for files that shouldn't appear in Recents (shared text, archive entries)
+ * @param asText show it with the text viewer whatever its type ("Open as text")
+ */
+@Serializable data class Viewer(
+    val uri: String,
+    val mimeHint: String? = null,
+    val source: String? = null,
+    val record: Boolean = true,
+    val asText: Boolean = false,
+)
+
+/** Several files shared to Folio at once: pick one to view. */
+@Serializable data class SharedFiles(val uris: List<String>, val source: String? = null)
 
 @Serializable data class Editor(val uri: String)
 

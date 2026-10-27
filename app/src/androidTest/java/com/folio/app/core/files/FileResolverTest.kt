@@ -23,7 +23,7 @@ class FileResolverTest {
 
     @Test fun resolvesPdfThroughContentUri() = runBlocking {
         val pdf = Samples.pdf("Folio")
-        val opened = resolver.resolve(providerUri(pdf), referrerHost = "com.whatsapp").getOrThrow()
+        val opened = resolver.resolve(providerUri(pdf), source = "com.whatsapp").getOrThrow()
         assertEquals("sample.pdf", opened.name)
         assertEquals(pdf.length(), opened.sizeBytes)
         assertEquals("application/pdf", opened.mime)

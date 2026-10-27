@@ -27,8 +27,22 @@ object SourceApps {
         "com.microsoft.teams" to "Teams",
         "com.discord" to "Discord",
         "org.thoughtcrime.securesms" to "Signal",
+        // Storage providers' content authorities: the file came from the phone's own storage.
+        "com.android.externalstorage.documents" to "Files",
+        "com.android.providers.downloads.documents" to "Files",
+        "com.android.providers.media.documents" to "Files",
+        "media" to "Files",
+        "downloads" to "Files",
     )
 
-    /** @param referrerHost host of `Activity.referrer` (a package name), or null. */
-    fun label(referrerHost: String?): String? = referrerHost?.let(names::get)
+    /**
+     * @param source a package name (from `Activity.referrer`) or, when the system "Open with" sheet hid the
+     *   sender, the file URI's authority, e.g. `com.whatsapp.provider.media`.
+     */
+    fun label(source: String?): String? {
+        if (source.isNullOrEmpty()) return null
+        names[source]?.let { return it }
+        // Authorities usually extend the owner's package name: com.whatsapp.provider.media -> com.whatsapp.
+        return names.entries.filter { source.startsWith(it.key + ".") }.maxByOrNull { it.key.length }?.value
+    }
 }

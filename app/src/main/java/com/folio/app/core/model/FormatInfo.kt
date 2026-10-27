@@ -27,6 +27,7 @@ object FormatInfo {
     private val byMime = HashMap<String, Format>()
 
     private fun add(mime: String, family: FileFamily, name: String, tint: BadgeTint, vararg exts: String) {
+        if (exts.isEmpty()) byMime.putIfAbsent(mime, Format(mime, family, name, "FILE", tint))
         exts.forEach { ext ->
             val format = Format(mime, family, name, ext.uppercase().take(4), tint)
             byExt[ext] = format
@@ -123,6 +124,7 @@ object FormatInfo {
         add("font/ttf", UNKNOWN, "Font", BadgeTint.Unknown, "ttf")
         add("font/otf", UNKNOWN, "Font", BadgeTint.Unknown, "otf")
         add("image/tiff", UNKNOWN, "TIFF image", BadgeTint.Image, "tif", "tiff")
+        add("application/x-ole-storage", UNKNOWN, "Older Office file", BadgeTint.Unknown)
 
         // MIME aliases other apps send.
         byMime["application/x-zip-compressed"] = byMime.getValue("application/zip")
