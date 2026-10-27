@@ -64,3 +64,13 @@ class FileResolver(private val context: Context) {
         return buffer.copyOf(filled)
     }
 }
+
+/**
+ * Resolves [key] (a URI string), falling back to its private copy when the original can no longer be read.
+ * Returns the file and whether it came from the copy, or null when neither is readable.
+ */
+suspend fun FileResolver.resolveOrCopy(key: String, copies: LocalCopies, mimeHint: String? = null, source: String? = null): Pair<OpenedFile, Boolean>? {
+    resolve(Uri.parse(key), mimeHint, source).getOrNull()?.let { return it to false }
+    val copy = copies.find(key) ?: return null
+    return resolve(Uri.fromFile(copy)).getOrNull()?.also { copies.touch(key) }?.let { it to true }
+}

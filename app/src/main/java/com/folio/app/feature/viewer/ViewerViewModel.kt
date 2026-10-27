@@ -11,6 +11,7 @@ import com.folio.app.AppContainer
 import com.folio.app.core.data.RecentFile
 import com.folio.app.core.files.LocalCopies
 import com.folio.app.core.files.UriAccess
+import com.folio.app.core.files.resolveOrCopy
 import com.folio.app.core.model.FileFamily
 import com.folio.app.core.model.OpenedFile
 import com.folio.app.core.viewer.FormatViewer
@@ -38,8 +39,15 @@ sealed interface ViewerUiState {
  * more, shows the private copy instead, still recorded under the original URI so Recents keeps one row.
  */
 class ViewerViewModel(private val container: AppContainer, handle: SavedStateHandle) : ViewModel() {
+    companion object {
+        const val RELOAD_KEY = "reload"
+    }
+
     val route = handle.toRoute<Viewer>()
     val viewerState = ViewerState()
+
+    /** Bumped by the editor after a save (via this entry's saved state) so the content reloads. */
+    val reloadToken: StateFlow<Long> = handle.getStateFlow(RELOAD_KEY, 0L)
 
     private val _state = MutableStateFlow<ViewerUiState>(ViewerUiState.Loading)
     val state: StateFlow<ViewerUiState> = _state
@@ -58,12 +66,8 @@ class ViewerViewModel(private val container: AppContainer, handle: SavedStateHan
     private suspend fun open() {
         viewerState.paper = container.settings.settings.first().paper
         val uri = Uri.parse(route.uri)
-        val direct = container.fileResolver.resolve(uri, route.mimeHint, route.source)
-        val resolved = direct.getOrNull()
-            ?: container.localCopies.find(route.uri)?.let { copy ->
-                container.fileResolver.resolve(Uri.fromFile(copy)).getOrNull()?.also { container.localCopies.touch(route.uri) }
-            }
-        if (resolved == null) {
+        val found = container.fileResolver.resolveOrCopy(route.uri, container.localCopies, route.mimeHint, route.source)
+        if (found == null) {
             _state.value = ViewerUiState.Unavailable(
                 if (uri.scheme == ContentResolver.SCHEME_FILE && route.source != null) {
                     "The other app shared this file in an old way Folio can't read. Try Share instead."
@@ -73,9 +77,10 @@ class ViewerViewModel(private val container: AppContainer, handle: SavedStateHan
             )
             return
         }
+        val (resolved, fromCopy) = found
         val file = if (route.asText) resolved.copy(family = FileFamily.TEXT) else resolved
         _state.value = ViewerUiState.Ready(file, container.viewerRegistry.forFile(file))
-        if (route.record) record(file, fromCopy = direct.isFailure)
+        if (route.record) record(file, fromCopy)
     }
 
     fun togglePin() = viewModelScope.launch { container.library.setPinned(route.uri, !pinned.value) }

@@ -31,6 +31,7 @@ fun LicensesScreen(onBack: () -> Unit) {
                         Bundled("Material Symbols icons", "Apache License 2.0")
                         Bundled("mammoth (modified SimpleSax class)", "BSD 2-Clause License, © 2015 Michael Williamson")
                         Bundled("Sora Editor", "GNU LGPL 2.1, used unmodified. Source: github.com/Rosemoe/sora-editor")
+                        Bundled("TextMate grammars (VS Code, vscode-kotlin)", "MIT; some TextMate Bundle License, BSD (Dart) or Apache 2.0 (Dockerfile)")
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }

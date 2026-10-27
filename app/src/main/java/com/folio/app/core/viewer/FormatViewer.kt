@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -31,6 +32,10 @@ class ViewerState(paper: Paper = Paper.Auto) {
     var immersive by mutableStateOf(false)
     /** Extra rows for the File info sheet, e.g. "Pages" to "28". */
     var infoExtras by mutableStateOf<Map<String, String>>(emptyMap())
+    /** Set by the content when this file can't be edited after all (shown as a disabled row; hides the Edit pill). */
+    var editBlockedReason by mutableStateOf<String?>(null)
+    /** On/off options a format offers in the More sheet, keyed by label (e.g. "Pretty view"). */
+    val toggles = mutableStateMapOf<String, Boolean>()
 }
 
 /** One per format family. Each format's content handles its own loading and error UI (plan §4.2). */
@@ -40,6 +45,9 @@ interface FormatViewer {
     val supportsPaper: Boolean
 
     fun canEdit(file: OpenedFile): Boolean = false
+
+    /** Labels of on/off options shown in the More sheet for this file; state lives in [ViewerState.toggles]. */
+    fun toggles(file: OpenedFile): List<String> = emptyList()
 
     /** Null hides the Print row. */
     fun printJob(context: Context, file: OpenedFile): PrintDocumentAdapter? = null

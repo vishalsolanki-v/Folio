@@ -5,26 +5,21 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.provider.DocumentsContract
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.OutputStream
 
 /** What Folio may do with a URI it was handed (plan §4.6, §4.7). */
 object UriAccess {
-    /** True only when we may overwrite the source. Our own copies (FileProvider, file://) never count. */
+    /**
+     * True when we hold a write grant for the source. Our own copies (FileProvider, file://) never count.
+     * Providers' FLAG_SUPPORTS_WRITE is not required: the Media documents provider omits it while honouring writes,
+     * and FileSaver verifies every write and restores the original if a provider misbehaves.
+     */
     fun canWrite(context: Context, uri: Uri): Boolean {
         if (uri.scheme != ContentResolver.SCHEME_CONTENT) return false
         if (uri.authority == "${context.packageName}.files") return false
-        val granted = context.checkCallingOrSelfUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION) ==
-            PackageManager.PERMISSION_GRANTED
-        if (!granted) return false
-        if (!DocumentsContract.isDocumentUri(context, uri)) return true
-        return runCatching {
-            context.contentResolver.query(uri, arrayOf(DocumentsContract.Document.COLUMN_FLAGS), null, null, null)?.use { c ->
-                c.moveToFirst() && (c.getInt(0) and DocumentsContract.Document.FLAG_SUPPORTS_WRITE) != 0
-            } ?: false
-        }.getOrDefault(false)
+        return context.checkCallingOrSelfUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION) == PackageManager.PERMISSION_GRANTED
     }
 
     /**

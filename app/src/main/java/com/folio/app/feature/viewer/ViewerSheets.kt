@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -21,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import com.folio.app.R
 import com.folio.app.core.designsystem.Paper
@@ -38,10 +40,13 @@ internal fun MoreSheet(
     paper: Paper?,
     pinned: Boolean?,
     canPrint: Boolean,
+    toggles: List<Pair<String, Boolean>>,
+    editBlockedReason: String?,
     onShare: () -> Unit,
     onOpenWith: () -> Unit,
     onPrint: () -> Unit,
     onPaper: (Paper) -> Unit,
+    onToggle: (String) -> Unit,
     onTogglePin: () -> Unit,
     onInfo: () -> Unit,
     onDismiss: () -> Unit,
@@ -50,6 +55,13 @@ internal fun MoreSheet(
         SheetRow(R.drawable.ic_share, "Share", { onDismiss(); onShare() })
         SheetRow(R.drawable.ic_open_in_new, "Open with another app", { onDismiss(); onOpenWith() })
         if (canPrint) SheetRow(R.drawable.ic_print, "Print or save as PDF", { onDismiss(); onPrint() })
+        toggles.forEach { (label, on) ->
+            SheetRow(
+                R.drawable.ic_code, label, { onToggle(label) },
+                trailing = { if (on) Icon(painterResource(R.drawable.ic_check), contentDescription = "On", tint = MaterialTheme.colorScheme.tertiary) },
+            )
+        }
+        if (editBlockedReason != null) SheetRow(R.drawable.ic_edit, "Editing not available", {}, supporting = editBlockedReason, enabled = false)
         if (paper != null) {
             Text(
                 "Paper",

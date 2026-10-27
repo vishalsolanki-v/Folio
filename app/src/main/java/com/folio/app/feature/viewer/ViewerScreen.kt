@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -90,6 +91,7 @@ private fun ReadyViewer(
     val context = LocalContext.current
     val state = vm.viewerState
     val pinned by vm.pinned.collectAsStateWithLifecycle()
+    val reload by vm.reloadToken.collectAsStateWithLifecycle()
     var finding by rememberSaveable { mutableStateOf(false) }
     var sheet by rememberSaveable { mutableStateOf<ViewerSheet?>(null) }
     var pageDialog by rememberSaveable { mutableStateOf(false) }
@@ -132,8 +134,15 @@ private fun ReadyViewer(
                 }
             }
             Box(Modifier.weight(1f)) {
-                viewer.Content(file, state, onTap = { state.immersive = !state.immersive }, modifier = Modifier.fillMaxSize())
-                ViewerPills(state, canEdit = viewer.canEdit(file), onPage = { pageDialog = true }, onEdit = { onEdit(vm.route.uri) })
+                key(reload) {
+                    viewer.Content(file, state, onTap = { state.immersive = !state.immersive }, modifier = Modifier.fillMaxSize())
+                }
+                ViewerPills(
+                    state,
+                    canEdit = viewer.canEdit(file) && state.editBlockedReason == null,
+                    onPage = { pageDialog = true },
+                    onEdit = { onEdit(vm.route.uri) },
+                )
             }
         }
     }
@@ -144,10 +153,13 @@ private fun ReadyViewer(
             paper = state.paper.takeIf { viewer.supportsPaper },
             pinned = pinned.takeIf { vm.route.record },
             canPrint = printJob != null,
+            toggles = viewer.toggles(file).map { it to (state.toggles[it] == true) },
+            editBlockedReason = state.editBlockedReason,
             onShare = { Sharing.share(context, file.uri, file.mime, file.name) },
             onOpenWith = actions.openWithAnotherApp,
             onPrint = { printJob?.let { context.getSystemService(PrintManager::class.java).print(file.name, it, null) } },
             onPaper = { state.paper = it },
+            onToggle = { label -> state.toggles[label] = state.toggles[label] != true },
             onTogglePin = vm::togglePin,
             onInfo = { sheet = ViewerSheet.Info },
             onDismiss = { if (sheet == ViewerSheet.More) sheet = null },
