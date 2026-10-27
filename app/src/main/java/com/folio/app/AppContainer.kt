@@ -15,9 +15,11 @@ import com.folio.app.core.files.FileResolver
 import com.folio.app.core.files.LocalCopies
 import com.folio.app.core.files.UriAccess
 import com.folio.app.core.viewer.ViewerRegistry
+import com.folio.app.formats.docx.DocxViewer
 import com.folio.app.formats.image.ImageViewer
 import com.folio.app.formats.media.MediaViewer
 import com.folio.app.formats.pdf.PdfViewer
+import com.folio.app.formats.text.HtmlViewer
 import com.folio.app.formats.text.MarkdownViewer
 import com.folio.app.formats.text.TextViewer
 import com.folio.app.formats.unknown.UnknownViewer
@@ -32,7 +34,7 @@ class AppContainer(val context: Context) {
     val settings = SettingsRepository(context.settingsStore)
 
     /** Format viewers register here as their milestones land; everything else gets the Unknown viewer. */
-    val viewerRegistry = ViewerRegistry(viewers = listOf(PdfViewer, TextViewer, MarkdownViewer, ImageViewer, MediaViewer), fallback = UnknownViewer)
+    val viewerRegistry = ViewerRegistry(viewers = listOf(PdfViewer, DocxViewer, TextViewer, MarkdownViewer, HtmlViewer, ImageViewer, MediaViewer), fallback = UnknownViewer)
 
     /** One Coil loader for the app: GIF (animated) and SVG decoders, no network module. */
     val imageLoader: ImageLoader by lazy {

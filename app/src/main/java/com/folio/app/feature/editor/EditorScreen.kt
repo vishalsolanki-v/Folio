@@ -56,6 +56,9 @@ import com.folio.app.core.designsystem.components.PillButton
 import com.folio.app.core.designsystem.components.PillStyle
 import com.folio.app.core.model.FileFamily
 import com.folio.app.formats.text.MarkdownBody
+import com.folio.app.core.viewer.HtmlTemplates
+import com.folio.app.core.viewer.SafeWebView
+import com.folio.app.core.viewer.ViewerState
 import com.folio.app.formats.text.SoraText
 import com.folio.app.formats.text.TextMate
 import com.folio.app.formats.text.soraLook
@@ -91,7 +94,7 @@ private fun ReadyEditor(vm: EditorViewModel, s: EditorUiState.Ready, onClose: ()
     var history by remember { mutableIntStateOf(0) } // bumps on edits so Undo/Redo enablement recomposes
     var confirmClose by remember { mutableStateOf(false) }
     var preview by remember { mutableStateOf(false) }
-    val canPreview = s.file.family == FileFamily.MARKDOWN
+    val canPreview = s.file.family == FileFamily.MARKDOWN || s.file.family == FileFamily.HTML
     val state by rememberUpdatedState(s)
     fun text() = editor?.text?.toString().orEmpty()
 
@@ -158,7 +161,13 @@ private fun ReadyEditor(vm: EditorViewModel, s: EditorUiState.Ready, onClose: ()
                 )
                 // The editor stays composed underneath so nothing typed is lost while previewing.
                 if (preview && canPreview) {
-                    Surface(color = look.paper.background, modifier = Modifier.fillMaxSize()) { MarkdownBody(text(), look.paper) }
+                    Surface(color = look.paper.background, modifier = Modifier.fillMaxSize()) {
+                        if (s.file.family == FileFamily.HTML) {
+                            SafeWebView(HtmlTemplates.page(text(), look.paper), look.paper.background, remember { ViewerState() }, onTap = {})
+                        } else {
+                            MarkdownBody(text(), look.paper)
+                        }
+                    }
                 }
             }
             if (s.file.family in setOf(FileFamily.CODE, FileFamily.MARKDOWN, FileFamily.HTML)) {

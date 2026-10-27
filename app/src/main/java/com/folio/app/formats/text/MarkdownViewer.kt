@@ -73,14 +73,7 @@ private fun MarkdownPreview(file: OpenedFile, state: ViewerState, onTap: () -> U
     val loaded by produceState<Result<LoadedText>?>(null, file.uri) {
         value = runCatching { TextLoader.load(context, file.uri, TextLoader.WINDOW_BYTES) }
     }
-    LaunchedEffect(loaded) {
-        val text = loaded?.getOrNull() ?: return@LaunchedEffect
-        state.editBlockedReason = when {
-            text.truncated -> "This file is too big to edit (over 5 MB)."
-            text.doc?.editable == false -> "This file uses an unusual text encoding, so saving could change it."
-            else -> null
-        }
-    }
+    LaunchedEffect(loaded) { loaded?.getOrNull()?.let { state.editBlockedReason = editBlockedReason(it) } }
     val paper = state.paper.colors(LocalFolioDark.current)
     val result = loaded
     when {
@@ -93,6 +86,13 @@ private fun MarkdownPreview(file: OpenedFile, state: ViewerState, onTap: () -> U
             MarkdownBody(result.getOrThrow().text, paper)
         }
     }
+}
+
+/** Why a rendered preview's file can't be edited, or null. Shared by Markdown and HTML previews. */
+internal fun editBlockedReason(text: LoadedText): String? = when {
+    text.truncated -> "This file is too big to edit (over 5 MB)."
+    text.doc?.editable == false -> "This file uses an unusual text encoding, so saving could change it."
+    else -> null
 }
 
 /** Rendered Markdown on [paper], in Folio's type scale. Used by the viewer and the editor's Preview. */

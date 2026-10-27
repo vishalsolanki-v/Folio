@@ -17,6 +17,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Folio">
 
+        <!-- Privacy: WebView (used for Word and HTML files) must not send usage statistics. -->
+        <meta-data android:name="android.webkit.WebView.MetricsOptOut" android:value="true" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
