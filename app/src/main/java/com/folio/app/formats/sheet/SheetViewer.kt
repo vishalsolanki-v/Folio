@@ -1,7 +1,6 @@
 package com.folio.app.formats.sheet
 
 import android.content.Context
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.folio.app.core.designsystem.Spacing
 import com.folio.app.core.designsystem.components.FilterChipsRow
 import com.folio.app.core.designsystem.components.LoadingSkeleton
+import com.folio.app.core.files.RandomAccess
 import com.folio.app.core.files.TextCodec
 import com.folio.app.core.model.FileFamily
 import com.folio.app.core.model.OpenedFile
@@ -34,8 +34,6 @@ import com.folio.app.core.viewer.ViewerState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.security.MessageDigest
 import java.util.zip.ZipFile
 
 /** XLSX, CSV and TSV in one grid (plan M11). CSV/TSV can also be edited as text. */
@@ -92,8 +90,7 @@ object SheetViewer : FormatViewer {
             }
             return Workbook(listOf(file.name), { sheet }, {}, blocked)
         }
-        val zipFile = if (file.uri.scheme == "file") File(file.uri.path!!) else copyToCache(context, file.uri)
-        val reader = XlsxReader(ZipFile(zipFile))
+        val reader = XlsxReader(ZipFile(RandomAccess.file(context, file.uri, "xlsx")))
         val refs = try {
             reader.sheets.also { if (it.isEmpty()) error("No sheets") }
         } catch (e: Throwable) {
@@ -101,14 +98,6 @@ object SheetViewer : FormatViewer {
             throw e
         }
         return Workbook(refs.map { it.name }, { i -> reader.readSheet(refs[i]) }, reader::close, null)
-    }
-
-    /** XLSX needs random access (ZipFile); content URIs are copied into cacheDir/open first. */
-    private fun copyToCache(context: Context, uri: Uri): File {
-        val name = MessageDigest.getInstance("SHA-1").digest(uri.toString().toByteArray()).joinToString("") { "%02x".format(it) }
-        val copy = File(context.cacheDir, "open/$name.xlsx").apply { parentFile!!.mkdirs() }
-        context.contentResolver.openInputStream(uri)!!.use { input -> copy.outputStream().use { input.copyTo(it) } }
-        return copy
     }
 }
 

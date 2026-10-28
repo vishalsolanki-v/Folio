@@ -1,11 +1,10 @@
 package com.folio.app.formats.sheet
 
+import com.folio.app.core.files.LimitedStream
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.Closeable
-import java.io.FilterInputStream
 import java.io.IOException
-import java.io.InputStream
 import java.math.BigDecimal
 import java.math.MathContext
 import java.time.LocalDate
@@ -292,16 +291,5 @@ private fun XmlPullParser.skipElement() {
             XmlPullParser.END_TAG -> depth--
             XmlPullParser.END_DOCUMENT -> return
         }
-    }
-}
-
-/** Stops a hostile (zip-bomb) part from being read forever: throws once more than [limit] bytes come out. */
-private class LimitedStream(input: InputStream, private val limit: Long) : FilterInputStream(input) {
-    private var count = 0L
-    override fun read(): Int = super.read().also { if (it >= 0) bump(1) }
-    override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, len).also { if (it > 0) bump(it.toLong()) }
-    private fun bump(n: Long) {
-        count += n
-        if (count > limit) throw IOException("Part too large")
     }
 }
