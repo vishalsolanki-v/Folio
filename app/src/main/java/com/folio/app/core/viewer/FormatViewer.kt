@@ -68,6 +68,8 @@ class ViewerActions(
     val showInfo: () -> Unit,
     /** Null when there is no text viewer to switch to. */
     val openAsText: (() -> Unit)?,
+    /** Opens another file (e.g. an archive entry) in a new viewer, not recorded in Recents. [source] labels where it came from. */
+    val openFile: (uri: String, source: String?) -> Unit = { _, _ -> },
 )
 
 val LocalViewerActions = staticCompositionLocalOf { ViewerActions({}, {}, null) }

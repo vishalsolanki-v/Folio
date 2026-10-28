@@ -39,8 +39,12 @@ object SourceApps {
      * @param source a package name (from `Activity.referrer`) or, when the system "Open with" sheet hid the
      *   sender, the file URI's authority, e.g. `com.whatsapp.provider.media`.
      */
+    const val ARCHIVE_PREFIX = "archive:"
+
     fun label(source: String?): String? {
         if (source.isNullOrEmpty()) return null
+        // Files opened from inside an archive carry the archive's name.
+        if (source.startsWith(ARCHIVE_PREFIX)) return source.removePrefix(ARCHIVE_PREFIX)
         names[source]?.let { return it }
         // Authorities usually extend the owner's package name: com.whatsapp.provider.media -> com.whatsapp.
         return names.entries.filter { source.startsWith(it.key + ".") }.maxByOrNull { it.key.length }?.value

@@ -109,6 +109,7 @@ private fun ReadyViewer(
             openWithAnotherApp = { Sharing.openWith(context, file.uri, file.mime) },
             showInfo = { sheet = ViewerSheet.Info },
             openAsText = if (vm.canOpenAsText) ({ onOpen(vm.route.copy(asText = true, record = false)) }) else null,
+            openFile = { uri, source -> onOpen(Viewer(uri, source = source, record = false)) },
         )
     }
 
