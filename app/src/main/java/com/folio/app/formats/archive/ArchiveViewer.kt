@@ -29,6 +29,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.folio.app.core.designsystem.Spacing
 import com.folio.app.core.designsystem.components.EmptyState
@@ -180,8 +183,18 @@ private fun Breadcrumbs(archiveName: String, path: List<String>, onCrumb: (depth
     ) {
         itemsIndexed(crumbs) { depth, name ->
             val last = depth == crumbs.lastIndex
+            if (depth > 0) {
+                // Its own item so it sits between crumbs and points the reading direction in RTL too.
+                Text(
+                    if (LocalLayoutDirection.current == LayoutDirection.Rtl) "‹" else "›",
+                    // Fixed direction, or bidi mirroring flips the chosen glyph back.
+                    style = MaterialTheme.typography.labelLarge.copy(textDirection = TextDirection.Ltr),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = Spacing.md),
+                )
+            }
             Text(
-                (if (depth > 0) "›  " else "") + name,
+                name,
                 style = MaterialTheme.typography.labelLarge,
                 color = if (last) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier

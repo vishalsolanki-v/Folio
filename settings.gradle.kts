@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Folio"
 include(":app")
+include(":baselineprofile")

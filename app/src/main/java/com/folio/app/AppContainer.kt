@@ -33,7 +33,8 @@ private val Context.settingsStore by preferencesDataStore(name = "settings")
 /** App-wide singletons (plan §4.1). */
 class AppContainer(val context: Context) {
     val fileResolver = FileResolver(context)
-    val localCopies = LocalCopies(File(context.filesDir, "recent_copies"))
+    // Same folder as filesDir/recent_copies, built from the path string so app start does no disk access (StrictMode).
+    val localCopies = LocalCopies(File(context.applicationInfo.dataDir, "files/recent_copies"))
     val settings = SettingsRepository(context.settingsStore)
 
     /** Format viewers register here as their milestones land; everything else gets the Unknown viewer. */

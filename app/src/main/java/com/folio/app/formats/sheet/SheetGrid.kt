@@ -65,7 +65,6 @@ import kotlin.math.roundToInt
 /** A cell in the grid: 0-based row and column. */
 data class CellPos(val row: Int, val col: Int)
 
-private val ROW_HEIGHT = 36.dp
 private val NUMBER = Regex("^[-+]?[\\d.,\\s]*\\d[\\d.,]*%?$")
 
 /**
@@ -76,11 +75,14 @@ private val NUMBER = Regex("^[-+]?[\\d.,\\s]*\\d[\\d.,]*%?$")
 @Composable
 fun SheetGrid(sheet: SheetData, current: CellPos?, modifier: Modifier = Modifier) {
     val density = LocalDensity.current
-    val widths = remember(sheet) { columnWidths(sheet) }
+    // Cell sizes follow the font size (up to 2x) so large text isn't cut off in every cell.
+    val scale = density.fontScale.coerceIn(1f, 2f)
+    val rowHeight = 36.dp * scale
+    val widths = remember(sheet, scale) { columnWidths(sheet).map { it * scale } }
     val widthsPx = remember(widths, density) { with(density) { widths.map { it.toPx() } } }
     val starts = remember(widthsPx) { widthsPx.runningFold(0f) { acc, w -> acc + w } }
     val totalWidth = starts.last()
-    val rowNumberWidth = with(density) { (24 + 9 * sheet.rows.size.toString().length).dp }
+    val rowNumberWidth = (24 + 9 * sheet.rows.size.toString().length).dp * scale
     var opened by remember { mutableStateOf<String?>(null) }
     val listState = remember(sheet) { LazyListState() }
     var offsetX by remember(sheet) { mutableFloatStateOf(0f) }
@@ -155,14 +157,14 @@ fun SheetGrid(sheet: SheetData, current: CellPos?, modifier: Modifier = Modifier
             modifier = Modifier.fillMaxSize().scrollable(scrollState, Orientation.Horizontal),
         ) {
             stickyHeader {
-                Row(Modifier.fillMaxWidth().height(ROW_HEIGHT).background(headerColor)) {
+                Row(Modifier.fillMaxWidth().height(rowHeight).background(headerColor)) {
                     Box(Modifier.width(rowNumberWidth).fillMaxHeight().rowNumber(""))
                     Box(Modifier.weight(1f).fillMaxHeight().clipToBounds().cells(::columnName, { headStyle }))
                 }
             }
             items(sheet.rows.size, key = { it }) { r ->
                 val cells = sheet.rows[r]
-                Row(Modifier.fillMaxWidth().height(ROW_HEIGHT)) {
+                Row(Modifier.fillMaxWidth().height(rowHeight)) {
                     Box(Modifier.width(rowNumberWidth).fillMaxHeight().rowNumber("${r + 1}"))
                     Box(
                         Modifier

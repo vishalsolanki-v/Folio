@@ -5,6 +5,8 @@
     <!-- Folio is offline-only: strip any network permission a library tries to merge in. -->
     <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+    <!-- Media3 adds this for player wake modes, which Folio doesn't use. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" tools:node="remove" />
 
     <application
         android:name=".FolioApp"

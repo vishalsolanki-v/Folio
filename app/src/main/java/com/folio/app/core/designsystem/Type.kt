@@ -3,6 +3,7 @@ package com.folio.app.core.designsystem
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
@@ -34,18 +35,20 @@ val InterDisplay = FontFamily(inter(500, 32f), inter(600, 32f))
 
 val JetBrainsMono = FontFamily(mono(400), mono(500))
 
+// Text follows its own direction (first strong letter): Folio's UI is English, so in right-to-left locales
+// "2 items" must not be reordered to "items 2".
 val FolioTypography = Typography(
-    headlineMedium = TextStyle(fontFamily = InterDisplay, fontWeight = FontWeight.SemiBold, fontSize = 24.sp, lineHeight = 32.sp, letterSpacing = (-0.5).sp),
-    titleLarge = TextStyle(fontFamily = InterDisplay, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 28.sp, letterSpacing = (-0.3).sp),
-    titleMedium = TextStyle(fontFamily = InterText, fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 22.sp, letterSpacing = (-0.15).sp),
-    titleSmall = TextStyle(fontFamily = InterText, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp),
-    bodyLarge = TextStyle(fontFamily = InterText, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 26.sp),
-    bodyMedium = TextStyle(fontFamily = InterText, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
-    bodySmall = TextStyle(fontFamily = InterText, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp),
-    labelLarge = TextStyle(fontFamily = InterText, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
-    labelMedium = TextStyle(fontFamily = InterText, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.2.sp),
-    labelSmall = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.2.sp, fontFeatureSettings = "tnum"),
+    headlineMedium = TextStyle(textDirection = TextDirection.Content, fontFamily = InterDisplay, fontWeight = FontWeight.SemiBold, fontSize = 24.sp, lineHeight = 32.sp, letterSpacing = (-0.5).sp),
+    titleLarge = TextStyle(textDirection = TextDirection.Content, fontFamily = InterDisplay, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 28.sp, letterSpacing = (-0.3).sp),
+    titleMedium = TextStyle(textDirection = TextDirection.Content, fontFamily = InterText, fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 22.sp, letterSpacing = (-0.15).sp),
+    titleSmall = TextStyle(textDirection = TextDirection.Content, fontFamily = InterText, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp),
+    bodyLarge = TextStyle(textDirection = TextDirection.Content, fontFamily = InterText, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 26.sp),
+    bodyMedium = TextStyle(textDirection = TextDirection.Content, fontFamily = InterText, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
+    bodySmall = TextStyle(textDirection = TextDirection.Content, fontFamily = InterText, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp),
+    labelLarge = TextStyle(textDirection = TextDirection.Content, fontFamily = InterText, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
+    labelMedium = TextStyle(textDirection = TextDirection.Content, fontFamily = InterText, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.2.sp),
+    labelSmall = TextStyle(textDirection = TextDirection.Content, fontFamily = JetBrainsMono, fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.2.sp, fontFeatureSettings = "tnum"),
 )
 
 /** Code and numbers in viewers/editors; size is overridden by the editor font-size setting. */
-val CodeTextStyle = TextStyle(fontFamily = JetBrainsMono, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 21.sp)
+val CodeTextStyle = TextStyle(textDirection = TextDirection.Content, fontFamily = JetBrainsMono, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 21.sp)

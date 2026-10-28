@@ -1,3 +1,4 @@
+import java.util.Properties
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -9,6 +10,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.aboutlibraries)
     alias(libs.plugins.licensee)
+    alias(libs.plugins.baselineprofile)
 }
 
 /**
@@ -76,8 +78,23 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // The Play upload key lives outside git: keystore.properties (storeFile, storePassword, keyAlias, keyPassword).
+    // Without it, release builds are signed with the debug key so they can be installed and tested locally.
+    val keystoreProps = rootProject.file("keystore.properties").takeIf { it.exists() }?.let { f -> Properties().apply { f.inputStream().use(::load) } }
+    signingConfigs {
+        if (keystoreProps != null) {
+            create("upload") {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -147,6 +164,8 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     implementation(libs.datastore.preferences)
+    implementation(libs.profileinstaller)
+    baselineProfile(project(":baselineprofile"))
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
 

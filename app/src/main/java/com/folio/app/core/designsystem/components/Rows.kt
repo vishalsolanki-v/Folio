@@ -19,11 +19,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalDensity
 import com.folio.app.R
 import com.folio.app.core.designsystem.BadgeShape
 import com.folio.app.core.designsystem.BadgeTint
@@ -38,10 +41,11 @@ fun ExtBadge(label: String, tint: BadgeTint, spokenName: String, modifier: Modif
     val color = tint.color(LocalFolioDark.current)
     Box(
         modifier
-            .widthIn(min = 44.dp)
+            .widthIn(min = badgeWidth())
             .background(color.copy(alpha = 0.14f), BadgeShape)
             .padding(horizontal = 6.dp, vertical = 4.dp)
-            .semantics { contentDescription = spokenName },
+            // One spoken label ("PDF document"), not the badge letters as well.
+            .clearAndSetSemantics { contentDescription = spokenName },
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -54,10 +58,14 @@ fun ExtBadge(label: String, tint: BadgeTint, spokenName: String, modifier: Modif
     }
 }
 
+/** Badge column width; grows with the font size so every row's name still starts at the same place. */
+@Composable
+private fun badgeWidth() = with(LocalDensity.current) { (11.sp.toDp() * 4).coerceAtLeast(44.dp) } // 4 badge letters at their own size (non-linear font scaling grows small text most)
+
 /** Leading folder icon sized like a badge, so file and folder rows line up. */
 @Composable
 fun FolderGlyph(modifier: Modifier = Modifier) {
-    Box(modifier.widthIn(min = 44.dp), contentAlignment = Alignment.Center) {
+    Box(modifier.widthIn(min = badgeWidth()), contentAlignment = Alignment.Center) {
         Icon(painterResource(R.drawable.ic_folder), contentDescription = "Folder", tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

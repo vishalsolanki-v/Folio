@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,6 +22,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import com.folio.app.core.designsystem.Spacing
 import com.folio.app.core.designsystem.components.FilterChipsRow
 import com.folio.app.core.designsystem.components.LoadingSkeleton
@@ -168,7 +171,10 @@ private fun WorkbookContent(book: Workbook, state: ViewerState, modifier: Modifi
                 if (data.rows.isEmpty()) {
                     ViewerError("This sheet is empty.", Modifier.weight(1f))
                 } else {
-                    SheetGrid(data, matches.getOrNull(state.matchIndex), Modifier.weight(1f))
+                    // Spreadsheets keep A, B, C left to right in every locale, like spreadsheet apps.
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        SheetGrid(data, matches.getOrNull(state.matchIndex), Modifier.weight(1f))
+                    }
                 }
             }
         }
