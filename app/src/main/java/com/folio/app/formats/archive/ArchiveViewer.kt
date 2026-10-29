@@ -6,6 +6,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -138,7 +141,7 @@ private fun Browser(file: OpenedFile, archive: ZipArchive, modifier: Modifier) {
         if (folder.folders.isEmpty() && folder.files.isEmpty()) {
             EmptyState(if (path.isEmpty()) "This archive is empty" else "This folder is empty", "")
         } else {
-            LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), modifier = Modifier.weight(1f)) {
+            LazyColumn(contentPadding = PaddingValues(bottom = 32.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()), modifier = Modifier.weight(1f)) {
                 items(folder.folders.values.toList(), key = { "d/" + it.name }) { sub ->
                     FileRow(
                         name = sub.name,

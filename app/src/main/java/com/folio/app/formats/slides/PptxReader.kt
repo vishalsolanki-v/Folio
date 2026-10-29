@@ -94,8 +94,8 @@ class PptxReader(private val zip: ZipFile) : Closeable {
     fun read(): Deck {
         val pres = part("ppt/presentation.xml") ?: throw IOException("Not a presentation")
         val size = pres.child("sldSz")
-        val width = size?.attr("cx")?.toLongOrNull() ?: 9_144_000L
-        val height = size?.attr("cy")?.toLongOrNull() ?: 6_858_000L
+        val width = size?.attr("cx")?.toLongOrNull()?.takeIf { it > 0 } ?: 9_144_000L
+        val height = size?.attr("cy")?.toLongOrNull()?.takeIf { it > 0 } ?: 6_858_000L
         val presRels = rels("ppt/presentation.xml")
         val paths = pres.child("sldIdLst")?.all("sldId").orEmpty().mapNotNull { presRels[it.nsAttr("id")]?.first }.take(MAX_SLIDES)
         val slides = paths.mapIndexed { i, path -> readSlide(i + 1, path) }

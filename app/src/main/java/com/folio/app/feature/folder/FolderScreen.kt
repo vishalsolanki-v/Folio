@@ -38,6 +38,7 @@ import com.folio.app.core.designsystem.components.IconAction
 import com.folio.app.core.designsystem.components.LoadingSkeleton
 import com.folio.app.core.designsystem.components.PillButton
 import com.folio.app.core.designsystem.components.PillStyle
+import com.folio.app.core.files.DocumentTree
 import com.folio.app.core.files.MimeSniffer
 import com.folio.app.core.model.FormatInfo
 import com.folio.app.core.model.fileSubtitle
@@ -46,6 +47,7 @@ import com.folio.app.navigation.Folder
 @Composable
 fun FolderScreen(
     onBack: () -> Unit,
+    onGoToRoot: (Folder) -> Unit,
     onOpenFolder: (Folder) -> Unit,
     onOpenFile: (String) -> Unit,
     onFolderRemoved: () -> Unit,
@@ -59,6 +61,11 @@ fun FolderScreen(
     Scaffold(
         topBar = {
             FolioTopBar(vm.route.title, onBack = onBack) {
+                if (!vm.isRoot) {
+                    IconAction(R.drawable.ic_folder_open, "Go to folder root", onClick = {
+                        onGoToRoot(Folder(vm.route.treeUri, DocumentTree.rootDocId(vm.treeUri), vm.route.rootTitle))
+                    })
+                }
                 Box {
                     IconAction(R.drawable.ic_sort, "Sort", { sortMenu = true })
                     DropdownMenu(sortMenu, onDismissRequest = { sortMenu = false }) {
@@ -117,7 +124,7 @@ private fun FolderList(state: FolderUiState.Ready, vm: FolderViewModel, onOpenFo
                     name = entry.name,
                     subtitle = "",
                     leading = { FolderGlyph() },
-                    onClick = { onOpenFolder(Folder(vm.route.treeUri, entry.docId, entry.name)) },
+                    onClick = { onOpenFolder(Folder(vm.route.treeUri, entry.docId, entry.name, vm.route.rootTitle)) },
                 )
             } else {
                 val format = FormatInfo.describe(entry.mime, MimeSniffer.extensionOf(entry.name))

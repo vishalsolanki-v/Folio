@@ -116,10 +116,11 @@ fun FilterChipsRow(
     selected: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(horizontal = Spacing.screen),
 ) {
     LazyRow(
         modifier = modifier,
-        contentPadding = PaddingValues(horizontal = Spacing.screen),
+        contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         itemsIndexed(labels) { index, label ->

@@ -104,7 +104,12 @@ fun SoraText(
                 }
             },
             update = { it.applyLook(look) },
-            onRelease = { it.release(); if (editor === it) editor = null },
+            onRelease = { view ->
+                (view.parent as? android.view.ViewGroup)?.removeView(view)
+                // Not view.post: a detached view holds posted work until it's attached again, so release() would never run.
+                android.os.Handler(android.os.Looper.getMainLooper()).post { view.release() }
+                if (editor === view) editor = null
+            },
         )
     }
 

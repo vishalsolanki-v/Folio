@@ -13,6 +13,9 @@ import androidx.compose.foundation.gestures.calculateCentroid
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -225,7 +228,7 @@ private fun PdfPages(handle: PdfDocumentHandle, state: ViewerState, onTap: () ->
 
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(Spacing.sm),
+            contentPadding = PaddingValues(start = Spacing.sm, end = Spacing.sm, top = Spacing.sm, bottom = 80.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
             verticalArrangement = Arrangement.spacedBy(pageGap),
             modifier = Modifier
                 .fillMaxSize()
@@ -365,8 +368,8 @@ private fun Modifier.pinchToZoom(widthPx: Int, zoom: () -> Float, onChange: (zoo
  * channel by channel (out = ink + (bg - ink) * in). Light paper needs no filter.
  */
 private fun paperFilter(paper: Paper, dark: Boolean): ColorFilter? {
-    val resolved = if (paper == Paper.Auto) (if (dark) Paper.Dark else Paper.Light) else paper
-    if (resolved == Paper.Light) return null
+    if (paper == Paper.Light || paper == Paper.Auto) return null
+    val resolved = paper
     val (bg, ink) = resolved.colors(dark)
     val m = floatArrayOf(
         bg.red - ink.red, 0f, 0f, 0f, ink.red * 255,

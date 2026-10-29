@@ -1,8 +1,10 @@
 package com.folio.app.core.designsystem.components
 
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -74,6 +76,7 @@ fun FolderGlyph(modifier: Modifier = Modifier) {
  * The one list row used for files and folders: leading badge, name (middle-ellipsized so the
  * extension stays visible), one-line subtitle, optional trailing slot (usually an overflow button).
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FileRow(
     name: String,
@@ -82,12 +85,18 @@ fun FileRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     trailing: (@Composable () -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
+    val clickModifier = if (onLongClick != null) {
+        Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+    } else {
+        Modifier.clickable(onClick = onClick)
+    }
     Row(
         modifier
             .fillMaxWidth()
             .heightIn(min = Spacing.rowHeight)
-            .clickable(onClick = onClick)
+            .then(clickModifier)
             .padding(start = Spacing.screen, end = if (trailing == null) Spacing.screen else Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),

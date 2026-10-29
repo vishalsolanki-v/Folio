@@ -1,6 +1,10 @@
 package com.folio.app.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -31,23 +35,26 @@ fun FolioNavHost(
     /** Called when the user backs out of the start destination (ExternalOpenActivity finishes). */
     onExit: () -> Unit = {},
 ) {
-    // Plan §3.3: fade + 24dp slide, 220 ms.
-    val shift = with(LocalDensity.current) { 24.dp.roundToPx() }
-    val spec = tween<Float>(220, easing = FastOutSlowInEasing)
-    val slide = tween<IntOffset>(220, easing = FastOutSlowInEasing)
+    // Keep forward navigation subtle; use a fast accelerate-out when leaving a document so Back feels instant and snappy.
+    val shift = with(LocalDensity.current) { 20.dp.roundToPx() }
+    val enterSpec = tween<Float>(140, easing = FastOutSlowInEasing)
+    val enterSlide = tween<IntOffset>(140, easing = FastOutSlowInEasing)
+    val exitFade = tween<Float>(80, easing = LinearEasing)
+    val popSlide = tween<IntOffset>(100, easing = FastOutLinearInEasing)
     fun back() { if (!navController.popBackStack()) onExit() }
 
     NavHost(
         navController = navController,
         startDestination = startDestination,
-        enterTransition = { fadeIn(spec) + slideInHorizontally(slide) { shift } },
-        exitTransition = { fadeOut(spec) + slideOutHorizontally(slide) { -shift } },
-        popEnterTransition = { fadeIn(spec) + slideInHorizontally(slide) { -shift } },
-        popExitTransition = { fadeOut(spec) + slideOutHorizontally(slide) { shift } },
+        enterTransition = { fadeIn(enterSpec) + slideInHorizontally(enterSlide) { shift } },
+        exitTransition = { fadeOut(exitFade) },
+        popEnterTransition = { fadeIn(exitFade) },
+        popExitTransition = { slideOutHorizontally(popSlide) { shift } + fadeOut(exitFade) },
     ) {
         composable<Home> {
             HomeScreen(
                 onOpenFile = { uri -> navController.navigate(Viewer(uri)) },
+                onEditFile = { uri -> navController.navigate(Editor(uri)) },
                 onOpenFolder = { navController.navigate(it) },
                 onOpenSettings = { navController.navigate(Settings) },
             )
@@ -55,6 +62,12 @@ fun FolioNavHost(
         composable<Folder> {
             FolderScreen(
                 onBack = ::back,
+                onGoToRoot = { root ->
+                    navController.navigate(root) {
+                        popUpTo<Home> { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
                 onOpenFolder = { navController.navigate(it) },
                 onOpenFile = { uri -> navController.navigate(Viewer(uri)) },
                 onFolderRemoved = { navController.popBackStack(Home, inclusive = false) },

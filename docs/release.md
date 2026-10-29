@@ -56,8 +56,8 @@ licensee passing, every format opening on API 26 and 37.
   > • Look inside ZIP files and open what's in them
   > • Recents, pinned files and your own folders on one simple home screen
   >
-  > Private by design: Folio has no internet access at all. Your files never leave your phone. No account,
-  > no ads, no tracking, nothing collected.
+  > Private by design: Folio has no internet access and uploads nothing. Files stay on your phone unless you
+  > choose Share or Open with another app. No account, no ads, no tracking, nothing collected by Folio.
 
 - **Category:** Productivity. **Tags:** document viewer, PDF reader, file viewer.
 - **Screenshots:** Home (light), a PDF (dark paper), a spreadsheet, slides, the editor, Settings with the privacy
@@ -65,9 +65,12 @@ licensee passing, every format opening on API 26 and 37.
 
 ## 5. Data safety form
 
-- Does the app collect or share any of the required user data types? **No.**
-- Is all user data encrypted in transit? **Not applicable** (no data leaves the device; the app has no network
-  permission).
+- Does the app collect or share any of the required user data types? Folio has no network access and processes
+  files locally. The user can explicitly transfer a selected document to another app with Share/Open with. Google
+  Play's policy exempts reasonably expected user-initiated transfers from "sharing" in some cases; confirm the
+  current form's treatment for Folio's document types and intended flows before submitting the declaration.
+- Is all user data encrypted in transit? Folio itself has no network access. The system share sheet can transfer a
+  user-selected file to another app; assess the relevant Play Console answer for that user-initiated flow.
 - Do you provide a way for users to request that their data is deleted? Data stays on the device; Settings →
   "Clear recents and copies" removes everything Folio keeps, and uninstalling removes the rest.
 

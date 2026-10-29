@@ -79,6 +79,12 @@ private fun SettingsBody(s: Settings, vm: SettingsViewModel, onOpenLicenses: () 
 
     Group("Documents")
     Label("Default paper")
+    Text(
+        "Auto shows PDFs, Word files and web pages as written, and text in the app's theme.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = Spacing.screen).padding(bottom = Spacing.sm),
+    )
     FilterChipsRow(listOf("Auto", "Light", "Sepia", "Dark"), s.paper.ordinal, { vm.setPaper(Paper.entries[it]) })
 
     Group("Editor")
@@ -197,7 +203,7 @@ private fun PrivacyCard() {
         Row(Modifier.padding(Spacing.lg), horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
             Icon(painterResource(R.drawable.ic_lock), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                "Folio has no internet access. Your files never leave this phone. Nothing is collected.",
+                "Folio has no internet access and sends nothing on its own. Files stay here unless you choose Share or Open with another app. Nothing is collected.",
                 style = MaterialTheme.typography.bodyMedium,
             )
         }

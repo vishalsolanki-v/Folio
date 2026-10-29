@@ -17,14 +17,14 @@ needs a different app (a PDF app, an Office app, a text editor, an archive app..
 - shows up in Android's **Open with** and **Share** lists for (almost) every file type, from any app;
 - previews nearly any file instantly;
 - lets you **edit only the formats it can edit without breaking them** (text-like formats); everything else is view-only, with no edit button;
-- works **100% offline**. The app has **no INTERNET permission**, no account, no analytics, no ads. Files never leave the phone;
+- works **100% offline**. Folio has **no INTERNET permission**, account, analytics or ads, and does not upload files. Files stay on the phone unless the user explicitly chooses Share/Open with another app, which grants that selected app access;
 - is **free on the Play Store**;
 - looks like NotebookLM / Notion / Zoho Notebook: warm neutral surfaces, editorial typography, hairline borders, very few things per screen.
 
 **What the user decided:**
 - Native Android, published free on Play Store, no ads.
 - Full editing wanted, but **edit button only for formats that are safely editable**; others view-only.
-- **No AI**, fully offline, nothing collected, nothing shared.
+- **No AI**, fully offline, no automatic collection or transfer. Explicit user-selected Share/Open with flows can pass a file to the chosen app.
 - **No storage permission.** Home = Recents + Pinned + folders the user adds once + the system "Open file" picker.
 - Name: Folio.
 
@@ -98,7 +98,7 @@ camera scanner → PDF (CameraX + `PdfDocument`; **not** ML Kit, which depends o
 
 ## 2. UX: screens and flows
 
-Four main screens. No bottom navigation bar, no drawer, no tabs.
+ Four main screens. No bottom navigation bar, no drawer, no tabs.
 
 ```
 Home ──tap file / Open file──► Viewer ──Edit pill──► Editor
@@ -108,19 +108,20 @@ External app (WhatsApp/Gmail/Files) ──Open with / Share──► Viewer (Bac
 ```
 
 ### 2.1 Home
-- **Top row:** "Folio" wordmark (headlineMedium, left), Settings icon button (right). Nothing else.
+- **Top row:** "Folio" wordmark (headlineMedium, left), Create file and Settings icon buttons (right). Create file offers plain text, Markdown, JSON and CSV, then asks Android where to save it; Folio seeds a small starter template and opens the supported editor.
 - **Search field** (pill, 48dp tall, `surfaceContainerHigh`, placeholder "Search recent files"). Filters Recents + Pinned by file name, live.
 - **Filter chips** (single row, horizontally scrollable): All · Pinned · Documents · Sheets · Text & code · Media · Archives. Default All.
 - **Folders** (only if the user added any): a horizontal row of folder cards (icon + name), last card is "+ Add folder". If none, show a single subtle text button "+ Add a folder" under the chips.
-- **Recents list:** `LazyColumn` of `FileRow`s, newest first. Pinned files appear in a small "Pinned" section above Recents (when filter = All).
-- **FileRow** = 4 things only: (1) extension badge (monospace, tinted, 6dp radius, e.g. `PDF`), (2) file name (1 line, **middle-ellipsized** so the extension end stays visible), (3) subtitle `2.4 MB · 10 min ago · WhatsApp`, (4) ⋯ overflow (Pin/Unpin, Share, Remove from recents).
-  Swipe left = remove from recents (with Undo snackbar).
+- **Recents list:** `LazyColumn` of `FileRow`s. Sort by Recent, Oldest, Name (A–Z), or Size (largest first). Pinned files appear in a small "Pinned" section above Recents only for All + Recent.
+- **FileRow** = extension badge, name, subtitle and overflow. Rename appears only when the document provider confirms it supports renaming and Folio holds durable write access; Pin/Unpin, Share and Remove from recents are also available.
+  Swipe left = remove from recents (with Undo snackbar). Long-press or the selection control enters multi-select; Select all, Pin/Unpin, Share and Remove apply to the current visible results. Remove affects Folio's recent list, not the original files.
 - **Primary action:** extended FAB bottom-right "Open file" (opens system picker `ACTION_OPEN_DOCUMENT` with `*/*`).
 - **Empty state** (no recents): simple line illustration (vector, monochrome), title "Open anything", body "Tap any file in WhatsApp, Gmail or Files and choose Folio. Or open one from here.", button "Open file".
 
 ### 2.2 Folder
 - Top bar: back, folder name, sort icon (Name / Newest).
 - List of `FileRow`s (folders first, with a folder icon instead of badge). Tap folder → drill down (same screen, new route). Tap file → Viewer.
+- Each nested folder remains one Back step; a top-bar shortcut returns directly to the selected folder's root.
 - Overflow on the top bar: "Remove folder" (only at the folder root).
 - Note: Android 11+ does not allow picking the root of `Download` as a folder; the picker explains this itself. Our empty-folder copy says: "Tip: pick a folder inside Downloads, like WhatsApp Documents."
 
@@ -131,7 +132,7 @@ External app (WhatsApp/Gmail/Files) ──Open with / Share──► Viewer (Bac
 - **Bottom-left pill (paged formats: PDF, PPTX):** "4 / 28". Tap → v1.0: a small dialog to type a page number; v1.1: thumbnails sheet.
 - **Bottom-right pill (editable formats only):** "✎ Edit". Hidden for everything else. Hidden if the file > 5 MB or its text encoding can't be round-tripped safely (then the More sheet shows a disabled "Editing not available for this file" row explaining why).
 - **More sheet** (modal bottom sheet, 24dp top corners), rows with icon + label:
-  Share · Open with another app · Print / Save as PDF (formats that support it) · Paper: Auto / Light / Sepia / Dark (segmented, for PDF, DOCX, HTML, text, markdown) · Pin / Unpin · File info.
+ Share · Open in browser (for web, text, image and PDF types; launches an installed external browser handler) · Open with another app · Rename (only when the source provider allows it) · Print / Save as PDF (formats that support it) · Paper: Auto / Light / Sepia / Dark (segmented, for PDF, DOCX, HTML, text, markdown) · Pin / Unpin · File info.
 - **File info sheet:** name, type (friendly, e.g. "Word document"), size, last modified (if known), source app ("From WhatsApp", from `Activity.referrer`), pages/sheets/slides count (if known), image dimensions + EXIF date/camera (images).
 - **Password sheet** (encrypted PDF): "This PDF is password protected" + password field + Open. Wrong password → field error "Wrong password". Password stays in memory only.
 - **Loading:** skeleton shimmer of the content area for > 150 ms loads. **Errors:** friendly full-screen state with icon, one sentence ("This file looks damaged, so Folio can't show it."), buttons "Open with another app" and "File info".
@@ -149,7 +150,7 @@ External app (WhatsApp/Gmail/Files) ──Open with / Share──► Viewer (Bac
 - **Documents:** Default paper: Auto / Light / Sepia / Dark.
 - **Editor:** Font size (slider 12–20sp), Word wrap (switch), Line numbers (switch).
 - **Storage:** "Keep copies of shared files for Recents" (switch, default on, explained: "Files opened from WhatsApp or email disappear after you close them. Folio keeps a private copy on this phone so they stay in Recents. Up to 300 MB."), "Clear recents and copies" (confirm dialog).
-- **Privacy card** (static, `surfaceContainerLow` card): lock icon, "Folio has no internet access. Your files never leave this phone. Nothing is collected."
+- **Privacy card** (static, `surfaceContainerLow` card): lock icon, "Folio has no internet access and sends nothing on its own. Files stay here unless you choose Share or Open with another app. Nothing is collected."
 - **About:** version, "Open-source licenses" → licenses screen (AboutLibraries).
 
 ### 2.6 Copy style
@@ -402,7 +403,7 @@ registered **only** for types we can edit; view-only types get `ACTION_VIEW` onl
 (v1.1 adds epub, rar, 7z, eml, vcf, ics, font, apk, legacy Office and ODF MIME types to the first filter.)
 
 ### 4.9 Navigation
-Type-safe Navigation Compose routes (`@Serializable`): `Home`, `Folder(treeUri: String, docId: String, title: String)`, `Viewer(uri: String, mimeHint: String?)`, `Editor(uri: String)`, `Settings`, `Licenses`. Only URI strings travel in routes; `ViewerViewModel` re-resolves the `OpenedFile` with `FileResolver` (cheap). **Never put file contents in routes, Bundles or SavedState.**
+Type-safe Navigation Compose routes (`@Serializable`): `Home`, `Folder(treeUri: String, docId: String, title: String, rootTitle: String)`, `Viewer(uri: String, mimeHint: String?)`, `Editor(uri: String)`, `Settings`, `Licenses`. Only URI strings travel in routes; `ViewerViewModel` re-resolves the `OpenedFile` with `FileResolver` (cheap). **Never put file contents in routes, Bundles or SavedState.**
 
 ViewModels are created with `viewModel(factory = ...)` using `AppContainer` (via `(LocalContext.current.applicationContext as FolioApp).container`). No Hilt/Koin.
 
@@ -557,7 +558,7 @@ Room DB + DAOs (`RecentDao`: observeAll(): Flow, upsert, setPinned, delete, trim
 - Verify permissions: `apkanalyzer manifest permissions app/build/outputs/apk/release/app-release.apk` must print nothing network/storage related (and `licensee` passes).
 - **Application ID is permanent once published:** before the first Play upload, confirm the final ID with the owner (recommended `com.<ownername>.folio`; `com.folio.app` may be taken). Changing it means renaming the package, the FileProvider authority and reinstalling (DB/DataStore names are not tied to it).
 - **Personal Play developer accounts** created after Nov 2023 must run a closed test (currently ≥ 12 testers for 14 days) before production access; plan for that window. Organisation accounts are exempt.
-- Play listing: app name, short description ("Open any file. Offline. No ads."), screenshots (light + dark), Data safety = "No data collected, no data shared", privacy policy page (one paragraph, hosted on e.g. GitHub Pages), content rating questionnaire, target API = latest required.
+- Play listing: app name, short description ("Open any file. Offline. No ads."), screenshots (light + dark), Data safety answers reviewed against Folio's user-initiated Share/Open with flows and current Play policy, privacy policy page (one paragraph, hosted on e.g. GitHub Pages), content rating questionnaire, target API = latest required.
 **Accept:** release AAB builds; full checklist in §8 passes on release build on API 26 + latest.
 
 ---

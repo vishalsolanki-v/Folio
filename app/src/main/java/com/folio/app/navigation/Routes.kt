@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object Home
 
-@Serializable data class Folder(val treeUri: String, val docId: String, val title: String)
+@Serializable data class Folder(val treeUri: String, val docId: String, val title: String, val rootTitle: String = title)
 
 /**
  * @param source package of the app that sent the file (Activity.referrer), for the "From WhatsApp" label

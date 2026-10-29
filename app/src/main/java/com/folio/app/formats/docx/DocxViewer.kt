@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.folio.app.core.designsystem.LocalFolioDark
 import com.folio.app.core.designsystem.Paper
@@ -34,10 +35,11 @@ import org.zwobble.mammoth.DocumentConverter
 object DocxViewer : FormatViewer {
     override val families = setOf(FileFamily.WORD)
     override val supportsSearch = true
+    // Light/Auto = the page as written (white); Sepia/Dark recolour it for reading.
     override val supportsPaper = true
 
     override fun printJob(context: Context, file: OpenedFile): PrintDocumentAdapter =
-        WebViewPrintAdapter(context, file.name) { HtmlTemplates.wrap(toHtml(context, file.uri), Paper.Light.colors(false)) }
+        WebViewPrintAdapter(context, file.name) { HtmlTemplates.wrap(toHtml(context, file.uri), Paper.Light, appIsDark = false) }
 
     private suspend fun toHtml(context: Context, uri: Uri): String = withContext(Dispatchers.IO) {
         // mammoth already maps Heading 1-6; Word's Title/Subtitle styles would otherwise become plain paragraphs.
@@ -57,7 +59,9 @@ object DocxViewer : FormatViewer {
                 Result.failure(e)
             }
         }
-        val paper = state.paper.colors(LocalFolioDark.current)
+        val dark = LocalFolioDark.current
+        val paper = state.paper
+        val page = if (paper == Paper.Auto || paper == Paper.Light) Color.White else paper.colors(dark).background
         val result = body
         when {
             result == null -> LoadingSkeleton(modifier)
@@ -66,14 +70,14 @@ object DocxViewer : FormatViewer {
                     ?: "This file looks damaged, so Folio can't show it.",
                 modifier,
             )
-            else -> Column(modifier.background(paper.background)) {
+            else -> Column(modifier.background(page)) {
                 SimplifiedNote(
                     "Simplified layout",
                     "Folio shows Word files in a clean reading layout. Some formatting may look different. " +
                         "To see the exact layout, use Open with another app.",
                 )
-                val html = remember(result, paper) { HtmlTemplates.wrap(result.getOrThrow(), paper) }
-                SafeWebView(html, paper.background, state, onTap, Modifier.fillMaxSize().navigationBarsPadding())
+                val html = remember(result, paper, dark) { HtmlTemplates.wrap(result.getOrThrow(), paper, dark) }
+                SafeWebView(html, page, state, onTap, Modifier.fillMaxSize().navigationBarsPadding())
             }
         }
     }

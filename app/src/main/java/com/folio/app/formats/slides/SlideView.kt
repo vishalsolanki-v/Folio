@@ -118,7 +118,7 @@ private fun ShapeContent(shape: SlideShape, scale: Float, media: MediaSource, de
 @Composable
 private fun TextShape(box: TextBox, scale: Float, defaultInk: Color) {
     val density = LocalDensity.current
-    val family = MaterialTheme.typography.bodyLarge.fontFamily
+    val family = androidx.compose.ui.text.font.FontFamily.Default
     fun pt(points: Float) = with(density) { (points * EMU_PER_PT * scale).toSp() }
     val shape: Shape = when (box.geometry) {
         "ellipse" -> RoundedCornerShape(percent = 50)

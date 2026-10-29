@@ -49,9 +49,21 @@ class Library(
 
     suspend fun setPinned(uri: String, pinned: Boolean) = recents.setPinned(uri, pinned)
 
+    suspend fun setPinnedAll(uris: Collection<String>, pinned: Boolean) {
+        uris.forEach { setPinned(it, pinned) }
+    }
+
     /** Removes from Recents, dropping its private copy and permission. */
     suspend fun remove(uri: String) {
         recents.get(uri)?.let { forget(it) }
+    }
+
+    suspend fun removeAll(uris: Collection<String>) {
+        uris.forEach { remove(it) }
+    }
+
+    suspend fun rename(oldUri: String, newName: String, newUri: String? = null) {
+        recents.updateAfterRename(oldUri, newUri ?: oldUri, newName)
     }
 
     /** "Clear recents and copies" in Settings. Folders stay. */

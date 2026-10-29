@@ -2,6 +2,7 @@ package com.folio.app.core.data
 
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
@@ -24,6 +25,36 @@ interface RecentDao {
 
     @Query("DELETE FROM recent WHERE uri = :uri")
     suspend fun delete(uri: String)
+
+    @Query("UPDATE recent SET name = :newName WHERE uri = :uri")
+    suspend fun rename(uri: String, newName: String)
+
+    @Query("UPDATE recent SET name = :newName, uri = :newUri WHERE uri = :oldUri")
+    suspend fun updateUriAndName(oldUri: String, newUri: String, newName: String)
+
+    @Transaction
+    suspend fun updateAfterRename(oldUri: String, newUri: String, newName: String) {
+        if (oldUri == newUri) {
+            rename(oldUri, newName)
+            return
+        }
+        val previous = get(oldUri) ?: return
+        val destination = get(newUri)
+        if (destination == null) {
+            updateUriAndName(oldUri, newUri, newName)
+        } else {
+            delete(oldUri)
+            upsert(
+                destination.copy(
+                    name = newName,
+                    pinned = destination.pinned || previous.pinned,
+                    sourceApp = destination.sourceApp ?: previous.sourceApp,
+                    localCopyPath = destination.localCopyPath ?: previous.localCopyPath,
+                    persisted = destination.persisted || previous.persisted,
+                ),
+            )
+        }
+    }
 
     /** Rows that look like the same file reached through another URI. */
     @Query("SELECT * FROM recent WHERE name = :name AND sizeBytes = :sizeBytes AND mime = :mime AND uri != :uri")

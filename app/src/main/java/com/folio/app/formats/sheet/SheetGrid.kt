@@ -8,6 +8,10 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -154,6 +158,7 @@ fun SheetGrid(sheet: SheetData, current: CellPos?, modifier: Modifier = Modifier
 
         LazyColumn(
             state = listState,
+            contentPadding = PaddingValues(bottom = 72.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
             modifier = Modifier.fillMaxSize().scrollable(scrollState, Orientation.Horizontal),
         ) {
             stickyHeader {

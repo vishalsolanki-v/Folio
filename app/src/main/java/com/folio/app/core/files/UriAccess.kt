@@ -5,12 +5,28 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.provider.DocumentsContract
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.OutputStream
 
 /** What Folio may do with a URI it was handed (plan §4.6, §4.7). */
 object UriAccess {
+    /** Providers explicitly advertise rename support through DocumentsContract flags. */
+    fun supportsRename(context: Context, uri: Uri): Boolean {
+        if (uri.scheme != ContentResolver.SCHEME_CONTENT) return false
+        return runCatching {
+            context.contentResolver.query(uri, arrayOf(DocumentsContract.Document.COLUMN_FLAGS), null, null, null)
+                ?.use { cursor -> cursor.moveToFirst() && !cursor.isNull(0) &&
+                    (cursor.getInt(0) and DocumentsContract.Document.FLAG_SUPPORTS_RENAME) != 0 }
+                ?: false
+        }.getOrDefault(false)
+    }
+
+    /** Rename only where Folio can keep access after leaving the sender app. */
+    fun canRename(context: Context, uri: Uri): Boolean =
+        supportsRename(context, uri) && canWrite(context, uri) && (isPersisted(context, uri) || isInsideTree(uri))
+
     /**
      * True when we hold a write grant for the source. Our own copies (FileProvider, file://) never count.
      * Providers' FLAG_SUPPORTS_WRITE is not required: the Media documents provider omits it while honouring writes,

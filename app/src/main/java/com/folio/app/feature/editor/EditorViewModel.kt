@@ -55,6 +55,8 @@ class EditorViewModel(private val container: AppContainer, handle: SavedStateHan
 
     /** Drafts and Recents follow the file: the original URI first, the new one after "Save copy". */
     private var key = route.uri
+    var liveText: String? = null
+        private set
 
     private val _state = MutableStateFlow<EditorUiState>(EditorUiState.Loading)
     val state: StateFlow<EditorUiState> = _state
@@ -83,16 +85,28 @@ class EditorViewModel(private val container: AppContainer, handle: SavedStateHan
     private inline fun ready(block: (EditorUiState.Ready) -> EditorUiState.Ready) =
         _state.update { s -> if (s is EditorUiState.Ready) block(s) else s }
 
+    fun updateText(text: String) {
+        liveText = text
+        ready { if (it.dirty) it else it.copy(dirty = true) }
+    }
+
     fun markDirty() = ready { if (it.dirty) it else it.copy(dirty = true) }
 
-    fun dismissEarlierDraft(restored: Boolean) {
+    fun dismissEarlierDraft(restored: Boolean, draftText: String? = null) {
+        if (restored && draftText != null) liveText = draftText
         ready { it.copy(earlierDraft = null, dirty = it.dirty || restored) }
         if (!restored) viewModelScope.launch(Dispatchers.IO) { drafts.delete(key) }
     }
 
-    fun writeDraft(text: String) = viewModelScope.launch(Dispatchers.IO) { drafts.save(key, text) }
+    fun writeDraft(text: String) {
+        liveText = text
+        viewModelScope.launch(Dispatchers.IO) { drafts.save(key, text) }
+    }
 
-    fun discard() = viewModelScope.launch(Dispatchers.IO) { drafts.delete(key) }
+    fun discard() {
+        liveText = null
+        viewModelScope.launch(Dispatchers.IO) { drafts.delete(key) }
+    }
 
     fun messageShown() = ready { it.copy(message = null) }
     fun dismissValidation() = ready { it.copy(validationError = null) }

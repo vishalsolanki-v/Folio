@@ -10,6 +10,7 @@ import androidx.navigation.toRoute
 import com.folio.app.AppContainer
 import com.folio.app.core.data.RecentFile
 import com.folio.app.core.files.LocalCopies
+import com.folio.app.core.files.Sharing
 import com.folio.app.core.files.UriAccess
 import com.folio.app.core.files.resolveOrCopy
 import com.folio.app.core.model.FileFamily
@@ -21,8 +22,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,6 +45,8 @@ class ViewerViewModel(private val container: AppContainer, handle: SavedStateHan
     }
 
     val route = handle.toRoute<Viewer>()
+    private val activeUri = MutableStateFlow(route.uri)
+    val currentUri: StateFlow<String> = activeUri
     val viewerState = ViewerState()
 
     /** Bumped by the editor after a save (via this entry's saved state) so the content reloads. */
@@ -51,9 +54,17 @@ class ViewerViewModel(private val container: AppContainer, handle: SavedStateHan
 
     private val _state = MutableStateFlow<ViewerUiState>(ViewerUiState.Loading)
     val state: StateFlow<ViewerUiState> = _state
+    private val _canRename = MutableStateFlow(false)
+    val canRename: StateFlow<Boolean> = _canRename
+    private val _renameError = MutableStateFlow<String?>(null)
+    val renameError: StateFlow<String?> = _renameError
+    /** Bumped after each successful rename, so the screen closes its dialog. */
+    private val _renameCompleted = MutableStateFlow(0)
+    val renameCompleted: StateFlow<Int> = _renameCompleted
 
-    val pinned: StateFlow<Boolean> = container.library.observeRecents()
-        .map { rows -> rows.any { it.uri == route.uri && it.pinned } }
+    val pinned: StateFlow<Boolean> = combine(container.library.observeRecents(), activeUri) { rows, uri ->
+        rows.any { it.uri == uri && it.pinned }
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     /** Whether "Open as text" can be offered (only once a text viewer exists). */
@@ -79,15 +90,37 @@ class ViewerViewModel(private val container: AppContainer, handle: SavedStateHan
         }
         val (resolved, fromCopy) = found
         val file = if (route.asText) resolved.copy(family = FileFamily.TEXT) else resolved
+        _canRename.value = withContext(Dispatchers.IO) { UriAccess.canRename(container.context, file.uri) }
         _state.value = ViewerUiState.Ready(file, container.viewerRegistry.forFile(file))
         if (route.record) record(file, fromCopy)
     }
 
-    fun togglePin() = viewModelScope.launch { container.library.setPinned(route.uri, !pinned.value) }
+    fun togglePin() = viewModelScope.launch { container.library.setPinned(activeUri.value, !pinned.value) }
 
     fun removeFromRecents(done: () -> Unit) = viewModelScope.launch {
-        container.library.remove(route.uri)
+        container.library.remove(activeUri.value)
         done()
+    }
+
+    fun rename(newName: String) = viewModelScope.launch {
+        val s = (_state.value as? ViewerUiState.Ready) ?: return@launch
+        _renameError.value = null
+        val safeName = LocalCopies.safeName(newName)
+        val oldUri = activeUri.value
+        val oldFileUri = s.file.uri
+        val newUri = withContext(Dispatchers.IO) { Sharing.renameFile(container.context, oldFileUri, safeName) }
+        if (newUri == null) {
+            _renameError.value = "This file provider couldn't rename the file."
+            return@launch
+        }
+        val actualName = withContext(Dispatchers.IO) { Sharing.displayName(container.context, newUri) }
+            ?.takeIf { it.isNotBlank() } ?: safeName
+        container.library.rename(oldUri, actualName, newUri.toString())
+        activeUri.value = newUri.toString()
+        val updatedFile = s.file.copy(name = actualName, uri = newUri)
+        _state.value = s.copy(file = updatedFile)
+        _canRename.value = withContext(Dispatchers.IO) { UriAccess.canRename(container.context, newUri) }
+        _renameCompleted.value += 1
     }
 
     /** Last-modified time if the provider reports one (document URIs do), else null. */
@@ -107,7 +140,7 @@ class ViewerViewModel(private val container: AppContainer, handle: SavedStateHan
             fromCopy -> container.localCopies.find(route.uri)?.path
             persisted || UriAccess.isInsideTree(uri) || uri.scheme != ContentResolver.SCHEME_CONTENT -> null
             !container.settings.settings.first().keepCopies -> null
-            file.sizeBytes !in 0..LocalCopies.MAX_FILE_BYTES -> null
+            file.sizeBytes > LocalCopies.MAX_FILE_BYTES -> null
             else -> runCatching {
                 context.contentResolver.openInputStream(uri)?.use { container.localCopies.store(route.uri, file.name, it) }?.path
             }.getOrNull()

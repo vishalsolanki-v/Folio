@@ -21,6 +21,11 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -30,6 +35,7 @@ import com.folio.app.core.designsystem.Spacing
 import com.folio.app.core.designsystem.components.FilterChipsRow
 import com.folio.app.core.designsystem.components.FolioBottomSheet
 import com.folio.app.core.designsystem.components.SheetRow
+import com.folio.app.core.model.FileFamily
 import com.folio.app.core.model.FormatInfo
 import com.folio.app.core.model.OpenedFile
 
@@ -40,10 +46,13 @@ internal fun MoreSheet(
     paper: Paper?,
     pinned: Boolean?,
     canPrint: Boolean,
+    canRename: Boolean,
     toggles: List<Pair<String, Boolean>>,
     editBlockedReason: String?,
     onShare: () -> Unit,
+    onOpenInBrowser: (() -> Unit)?,
     onOpenWith: () -> Unit,
+    onRename: (() -> Unit)? = null,
     onPrint: () -> Unit,
     onPaper: (Paper) -> Unit,
     onToggle: (String) -> Unit,
@@ -53,7 +62,11 @@ internal fun MoreSheet(
 ) {
     FolioBottomSheet(onDismiss = onDismiss, title = file.name) {
         SheetRow(R.drawable.ic_share, "Share", { onDismiss(); onShare() })
+        onOpenInBrowser?.let { SheetRow(R.drawable.ic_language, "Open in browser", { onDismiss(); it() }) }
         SheetRow(R.drawable.ic_open_in_new, "Open with another app", { onDismiss(); onOpenWith() })
+        if (canRename && onRename != null) {
+            SheetRow(R.drawable.ic_rename, "Rename", { onDismiss(); onRename() })
+        }
         if (canPrint) SheetRow(R.drawable.ic_print, "Print or save as PDF", { onDismiss(); onPrint() })
         toggles.forEach { (label, on) ->
             SheetRow(
@@ -125,6 +138,47 @@ internal fun PageJumpDialog(pageLabel: String, onJump: (Int) -> Unit, onDismiss:
             )
         },
         confirmButton = { TextButton(onClick = { page?.let { onJump(it - 1) }; onDismiss() }, enabled = page != null) { Text("Go") } },
+        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+    )
+}
+
+@Composable
+fun RenameDialog(
+    currentName: String,
+    error: String?,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    // The name part starts selected (not the extension), so typing replaces just the name, like file managers do.
+    var field by remember {
+        val end = currentName.lastIndexOf('.').takeIf { it > 0 } ?: currentName.length
+        mutableStateOf(TextFieldValue(currentName, TextRange(0, end)))
+    }
+    val text = field.text
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename", style = MaterialTheme.typography.titleLarge) },
+        text = {
+            OutlinedTextField(
+                value = field,
+                onValueChange = { field = it },
+                label = { Text("File name") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().focusRequester(focus),
+            )
+            if (error != null) Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (text.isNotBlank()) onConfirm(text.trim())
+                },
+                enabled = text.isNotBlank() && text.trim() != currentName,
+            ) { Text("Save") }
+        },
         dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     )

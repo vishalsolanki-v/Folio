@@ -8,10 +8,19 @@
     <!-- Media3 adds this for player wake modes, which Folio doesn't use. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" tools:node="remove" />
 
+    <!-- Lets "Open in browser" find the installed browsers (package visibility, Android 11+). Not a permission. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
     <application
         android:name=".FolioApp"
         android:allowBackup="false"
-        android:enableOnBackInvokedCallback="true"
+        android:enableOnBackInvokedCallback="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:largeHeap="true"

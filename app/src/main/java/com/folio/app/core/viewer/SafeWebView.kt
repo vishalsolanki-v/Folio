@@ -27,8 +27,6 @@ import java.io.ByteArrayInputStream
  * Every sub-resource except inline `data:` URIs and Folio's own bundled font is answered with an empty response.
  */
 object SafeWeb {
-    /** Base URL for documents, so templates can load the bundled Inter font as `url(inter.ttf)`. */
-    const val BASE_URL = "file:///android_res/font/"
 
     fun newWebView(context: Context, client: WebViewClient = SafeClient()): WebView = WebView(context).apply {
         settings.apply {
@@ -43,18 +41,20 @@ object SafeWeb {
             setSupportZoom(true)
             builtInZoomControls = true
             displayZoomControls = false
+            useWideViewPort = true
+            loadWithOverviewMode = true
         }
         webViewClient = client
     }
 
-    fun load(webView: WebView, html: String) = webView.loadDataWithBaseURL(BASE_URL, html, "text/html", "utf-8", null)
+    fun load(webView: WebView, html: String) = webView.loadDataWithBaseURL(null, html, "text/html", "utf-8", null)
 
     open class SafeClient : WebViewClient() {
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = true
 
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
             val url = request.url.toString()
-            return if (url.startsWith("data:") || url == BASE_URL + "inter.ttf") null
+            return if (url.startsWith("data:")) null
             else WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
         }
     }
@@ -91,7 +91,11 @@ fun SafeWebView(html: String, background: Color, state: ViewerState, onTap: () -
             }
         },
         update = { it.setBackgroundColor(background.toArgb()) },
-        onRelease = { it.destroy() },
+        onRelease = { view ->
+            (view.parent as? android.view.ViewGroup)?.removeView(view)
+            // Not view.post: a detached view holds posted work until it's attached again, so destroy() would never run.
+            android.os.Handler(android.os.Looper.getMainLooper()).post { view.destroy() }
+        },
     )
 
     LaunchedEffect(webView, html) { webView?.let { SafeWeb.load(it, html) } }

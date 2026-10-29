@@ -32,8 +32,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -93,9 +95,13 @@ private fun ReadyEditor(vm: EditorViewModel, s: EditorUiState.Ready, onClose: ()
     var editor by remember { mutableStateOf<CodeEditor?>(null) }
     var history by remember { mutableIntStateOf(0) } // bumps on edits so Undo/Redo enablement recomposes
     var confirmClose by remember { mutableStateOf(false) }
+    var closeOnSave by rememberSaveable { mutableStateOf(false) }
     var preview by remember { mutableStateOf(false) }
     val canPreview = s.file.family == FileFamily.MARKDOWN || s.file.family == FileFamily.HTML
     val state by rememberUpdatedState(s)
+    // Keep the editor's input key stable during typing. SoraText recreates its AndroidView when this changes.
+    // A fresh composition (such as after rotation) can still seed from the ViewModel's recent text snapshot.
+    val editorInitialText = remember(s.file.uri) { vm.liveText ?: s.doc.text }
     fun text() = editor?.text?.toString().orEmpty()
 
     val saveAs = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(s.file.mime)) { uri ->
@@ -110,7 +116,12 @@ private fun ReadyEditor(vm: EditorViewModel, s: EditorUiState.Ready, onClose: ()
     LaunchedEffect(s.message) {
         s.message?.let { snackbar.showSnackbar(it); vm.messageShown() }
     }
-    LaunchedEffect(s.savedCount) { if (s.savedCount > 0) onSaved() }
+    LaunchedEffect(s.savedCount) {
+        if (s.savedCount > 0) {
+            onSaved()
+            if (closeOnSave) onClose()
+        }
+    }
 
     // Drafts: every 5 s while there are unsaved edits, and whenever the app goes to the background.
     LaunchedEffect(editor) {
@@ -120,6 +131,12 @@ private fun ReadyEditor(vm: EditorViewModel, s: EditorUiState.Ready, onClose: ()
         }
     }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { if (state.dirty) vm.writeDraft(text()) }
+    LaunchedEffect(history) {
+        if (history > 0 && state.dirty) {
+            delay(400)
+            vm.updateText(text())
+        }
+    }
 
     fun close() = if (state.dirty) confirmClose = true else onClose()
     BackHandler(onBack = ::close)
@@ -141,7 +158,7 @@ private fun ReadyEditor(vm: EditorViewModel, s: EditorUiState.Ready, onClose: ()
             )
             s.earlierDraft?.let { draft ->
                 DraftBanner(
-                    onRestore = { editor?.setText(draft); vm.dismissEarlierDraft(restored = true) },
+                    onRestore = { editor?.setText(draft); vm.dismissEarlierDraft(restored = true, draftText = draft) },
                     onDiscard = { vm.dismissEarlierDraft(restored = false) },
                 )
             }
@@ -150,7 +167,7 @@ private fun ReadyEditor(vm: EditorViewModel, s: EditorUiState.Ready, onClose: ()
                 LoadingSkeleton()
             } else Box(Modifier.weight(1f).fillMaxWidth()) {
                 SoraText(
-                    text = s.doc.text,
+                    text = editorInitialText,
                     scope = TextMate.scopeFor(s.file.extension.ifEmpty { if (s.file.family == FileFamily.MARKDOWN) "md" else "" }),
                     readOnly = false,
                     look = look,
@@ -163,7 +180,7 @@ private fun ReadyEditor(vm: EditorViewModel, s: EditorUiState.Ready, onClose: ()
                 if (preview && canPreview) {
                     Surface(color = look.paper.background, modifier = Modifier.fillMaxSize()) {
                         if (s.file.family == FileFamily.HTML) {
-                            SafeWebView(HtmlTemplates.page(text(), look.paper), look.paper.background, remember { ViewerState() }, onTap = {})
+                            SafeWebView(HtmlTemplates.page(text(), Paper.Light, fitToScreen = true), Color.White, remember { ViewerState() }, onTap = {})
                         } else {
                             MarkdownBody(text(), look.paper)
                         }
@@ -190,7 +207,7 @@ private fun ReadyEditor(vm: EditorViewModel, s: EditorUiState.Ready, onClose: ()
             title = "Discard changes?",
             text = "Your edits to ${s.file.name} haven't been saved.",
             confirmLabel = "Save",
-            onConfirm = { confirmClose = false; vm.save(text()) },
+            onConfirm = { confirmClose = false; closeOnSave = true; vm.save(text()) },
             dismissLabel = "Keep editing",
             onDismiss = { confirmClose = false },
             neutralLabel = "Discard",

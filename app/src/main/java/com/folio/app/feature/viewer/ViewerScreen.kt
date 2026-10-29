@@ -21,8 +21,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -92,10 +96,19 @@ private fun ReadyViewer(
     val state = vm.viewerState
     val pinned by vm.pinned.collectAsStateWithLifecycle()
     val reload by vm.reloadToken.collectAsStateWithLifecycle()
+    val canRename by vm.canRename.collectAsStateWithLifecycle()
+    val renameError by vm.renameError.collectAsStateWithLifecycle()
+    val renameCompleted by vm.renameCompleted.collectAsStateWithLifecycle()
     var finding by rememberSaveable { mutableStateOf(false) }
     var sheet by rememberSaveable { mutableStateOf<ViewerSheet?>(null) }
     var pageDialog by rememberSaveable { mutableStateOf(false) }
+    var renameDialog by rememberSaveable { mutableStateOf(false) }
     val printJob = remember(viewer, file) { viewer.printJob(context, file) }
+    // Only offered when an installed browser accepts this type (checked once per file, off the main thread).
+    val browser by produceState<android.content.Intent?>(null, file.uri) {
+        value = withContext(Dispatchers.IO) { Sharing.browserFor(context, file.uri, file.mime) }
+    }
+    LaunchedEffect(renameCompleted) { if (renameCompleted > 0) renameDialog = false }
 
     fun closeFind() {
         finding = false
@@ -108,7 +121,7 @@ private fun ReadyViewer(
         ViewerActions(
             openWithAnotherApp = { Sharing.openWith(context, file.uri, file.mime) },
             showInfo = { sheet = ViewerSheet.Info },
-            openAsText = if (vm.canOpenAsText) ({ onOpen(vm.route.copy(asText = true, record = false)) }) else null,
+            openAsText = if (vm.canOpenAsText) ({ onOpen(vm.route.copy(uri = vm.currentUri.value, asText = true, record = false)) }) else null,
             openFile = { uri, source -> onOpen(Viewer(uri, source = source, record = false)) },
         )
     }
@@ -142,7 +155,7 @@ private fun ReadyViewer(
                     state,
                     canEdit = viewer.canEdit(file) && state.editBlockedReason == null,
                     onPage = { pageDialog = true },
-                    onEdit = { onEdit(vm.route.uri) },
+                    onEdit = { onEdit(vm.currentUri.value) },
                 )
             }
         }
@@ -154,10 +167,19 @@ private fun ReadyViewer(
             paper = state.paper.takeIf { viewer.supportsPaper },
             pinned = pinned.takeIf { vm.route.record },
             canPrint = printJob != null,
+            canRename = canRename,
             toggles = viewer.toggles(file).map { it to (state.toggles[it] == true) },
             editBlockedReason = state.editBlockedReason,
             onShare = { Sharing.share(context, file.uri, file.mime, file.name) },
+            onOpenInBrowser = browser?.let { intent ->
+                {
+                    if (!Sharing.openInBrowser(context, intent)) {
+                        android.widget.Toast.makeText(context, "The browser couldn't open this file", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
             onOpenWith = actions.openWithAnotherApp,
+            onRename = { renameDialog = true },
             onPrint = { printJob?.let { context.getSystemService(PrintManager::class.java).print(file.name, it, null) } },
             onPaper = { state.paper = it },
             onToggle = { label -> state.toggles[label] = state.toggles[label] != true },
@@ -170,6 +192,7 @@ private fun ReadyViewer(
     }
     val label = state.pageLabel
     if (pageDialog && label != null) PageJumpDialog(label, onJump = { state.jumpToPage = it }, onDismiss = { pageDialog = false })
+    if (renameDialog) RenameDialog(file.name, renameError, onConfirm = { vm.rename(it) }, onDismiss = { renameDialog = false })
 }
 
 @Composable
