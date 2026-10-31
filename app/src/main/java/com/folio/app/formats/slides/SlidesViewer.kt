@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -123,7 +124,11 @@ private fun Deck(deck: Deck, media: MediaSource, state: ViewerState, onTap: () -
     }
     // Switching views keeps the same slide, or opens the one tapped in the outline.
     var opening by remember { mutableStateOf<Int?>(null) }
+    // Only on an actual switch: when the screen is rebuilt (rotation), the pager already restored its own slide.
+    var shownOutline by rememberSaveable { mutableStateOf(outline) }
     LaunchedEffect(outline) {
+        if (outline == shownOutline) return@LaunchedEffect
+        shownOutline = outline
         if (outline) list.scrollToItem(pager.currentPage) else pager.scrollToPage(opening ?: list.firstVisibleItemIndex)
         opening = null
     }

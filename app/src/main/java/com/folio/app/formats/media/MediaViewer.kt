@@ -10,6 +10,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -114,6 +117,13 @@ object MediaViewer : FormatViewer {
                     state.immersive = false // the video controls may have hidden the bars; the error screen needs them
                 }
                 override fun onPlayWhenReadyChanged(ready: Boolean, reason: Int) { playWhenReady = ready }
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    // A finished song goes back to the start, paused, so one tap plays it again (video has its own replay button).
+                    if (!video && playbackState == Player.STATE_ENDED) {
+                        player.pause()
+                        player.seekTo(0)
+                    }
+                }
             }
             player.addListener(listener)
             onDispose {
@@ -140,10 +150,13 @@ object MediaViewer : FormatViewer {
 }
 
 @OptIn(UnstableApi::class)
+@kotlin.OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun VideoPlayer(player: ExoPlayer, state: ViewerState, modifier: Modifier) {
+    // The player's controls stay above the navigation buttons. The space is kept even while the bars are hidden,
+    // so the picture doesn't jump when the controls (and bars) come and go.
     AndroidView(
-        modifier = modifier.background(Color.Black),
+        modifier = modifier.background(Color.Black).windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility),
         factory = { ctx ->
             PlayerView(ctx).apply {
                 this.player = player
