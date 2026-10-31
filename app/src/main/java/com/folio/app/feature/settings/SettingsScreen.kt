@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.folio.app.R
+import com.folio.app.Support
 import com.folio.app.appContainer
 import com.folio.app.core.data.Settings
 import com.folio.app.core.designsystem.CardShape
@@ -117,8 +118,10 @@ private fun SettingsBody(s: Settings, vm: SettingsViewModel, onOpenLicenses: () 
     PrivacyCard()
 
     Group("About")
-    val version = remember { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
+    val version = remember { Support.version(context) }
     ClickRow("Version", value = version)
+    ClickRow("Send feedback", chevron = true, onClick = { Support.sendFeedback(context) })
+    ClickRow("Check for updates", chevron = true, onClick = { Support.checkForUpdates(context) })
     ClickRow("Open-source licenses", chevron = true, onClick = onOpenLicenses)
     if (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
         ClickRow("Design catalog (debug)", chevron = true, onClick = {

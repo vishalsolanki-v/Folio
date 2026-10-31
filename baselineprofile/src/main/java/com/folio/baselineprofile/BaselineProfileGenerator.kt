@@ -46,6 +46,6 @@ class BaselineProfileGenerator {
     }
 
     private companion object {
-        const val PACKAGE = "com.folio.app"
+        const val PACKAGE = "online.vishalsolanki.folio"
     }
 }

@@ -70,11 +70,11 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.folio.app"
+        applicationId = "online.vishalsolanki.folio"
         minSdk = 26
         targetSdk = 37
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

@@ -16,6 +16,7 @@ class FolioApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        Support.CrashLog.install(this)
         // Debug builds log disk/network work on the main thread and leaked closeables (plan M14).
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
             StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build())

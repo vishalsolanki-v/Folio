@@ -1,13 +1,36 @@
-# Releasing Folio on Google Play
+# Releasing Folio
 
-Everything here is a draft for the owner to review. Nothing has been uploaded.
+## Now: APK on GitHub Releases (sideloaded)
+
+Folio ships as an APK from GitHub Releases, linked from https://www.vishalsolanki.online/apps/folio.
+The application ID is `online.vishalsolanki.folio` (final).
+
+**The signing key is the app's identity.** Without Play App Signing, every update must be signed with this exact key,
+forever: a lost key means users must uninstall to update. Keep `folio-release.jks` and its passwords in two safe
+places outside the repo (e.g. a password manager plus an offline drive). If Folio later goes to Play, upload this same
+key to Play App Signing so existing installs keep updating.
+
+Each release:
+1. Bump `versionCode` (+1) and `versionName` in `app/build.gradle.kts`.
+2. `./gradlew testDebugUnitTest lintDebug assembleRelease` → `app/build/outputs/apk/release/app-release.apk`,
+   signed with the release key from `keystore.properties`. Rename to `Folio-<version>.apk`.
+3. `sha256sum Folio-<version>.apk`.
+4. GitHub: new release tagged `v<version>`, attach the APK, paste the changelog and the SHA-256.
+5. Portfolio repo `src/data/apps.ts`: `version`, `size`, `sha256`, `released`, and a new `changelog` entry on top.
+   The site's update notice ("Check for updates" in the app) compares against `version`.
+
+Obtainium users get the update from the GitHub release automatically.
+
+Google's developer verification reaches India in 2027: before then, verify a developer account so sideloaded
+installs keep working without extra steps.
+
+## Later: Google Play
+
+Everything below is a draft for the owner to review. Nothing has been uploaded.
 
 ## 1. Decide before the first upload (can't be changed later)
 
-- **Application ID.** It is `com.folio.app` today. Once published it is permanent, and `com.folio.app` may already be
-  taken. Recommended: `com.<yourname>.folio`. Changing it means editing `applicationId` and `namespace` in
-  `app/build.gradle.kts`, moving the Kotlin packages, and updating the FileProvider authority (it is built from the
-  application ID, so it follows automatically). App data (recents, settings) is not tied to the ID.
+- **Application ID.** Settled: `online.vishalsolanki.folio` (the Kotlin namespace stays `com.folio.app`).
 - **Developer account type.** Personal accounts created after November 2023 must run a closed test with at least
   12 testers for 14 days before production. Organisation accounts are exempt.
 

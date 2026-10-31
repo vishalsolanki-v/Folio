@@ -1,11 +1,20 @@
 # Folio privacy policy
 
-_Last updated: 28 October 2026_
+_Last updated: 31 October 2026_
 
 Folio is a file viewer and editor that works entirely on your phone.
 
 **Folio collects nothing and has no internet permission.** Folio does not upload your files, Recents or settings.
 There is no account, analytics, advertising or crash-reporting service.
+
+**Feedback and crash reports are always your choice.** "Send feedback" in Settings, and the prompt Folio shows after
+it closes unexpectedly, open a draft email in your own email app. The draft holds the Folio version, your phone
+model and Android version, and for a crash, the technical error. You can read, edit or discard it; nothing is sent
+unless you press send. A crash error is kept on your phone only until you send or dismiss it.
+
+**"Check for updates"** opens Folio's web page in your browser, with the installed version in the link so the page
+can tell you if a newer one exists. **"Open in browser"** hands the file to your browser, which may run a web page's
+scripts and load content from the internet.
 
 **Files stay on your phone while Folio handles them.** To keep files from apps like WhatsApp or email in Recents
 after the sending app takes them away, Folio can keep a private copy inside its own storage (up to 300 MB; you can
@@ -25,4 +34,4 @@ folders you add, or apps that send a file to Folio.
 
 **Changes.** If this policy ever changes, the new version will be published at this address with a new date.
 
-**Contact:** _(add your support email here before publishing)_
+**Contact:** workwithvishalsolanki@gmail.com

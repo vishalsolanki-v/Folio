@@ -62,7 +62,14 @@ internal fun MoreSheet(
 ) {
     FolioBottomSheet(onDismiss = onDismiss, title = file.name) {
         SheetRow(R.drawable.ic_share, "Share", { onDismiss(); onShare() })
-        onOpenInBrowser?.let { SheetRow(R.drawable.ic_language, "Open in browser", { onDismiss(); it() }) }
+        onOpenInBrowser?.let {
+            // Unlike Folio's own viewer, the browser runs a page's scripts and fetches what it links to.
+            val web = file.mime == "text/html" || file.mime == "application/xhtml+xml" || file.mime == "image/svg+xml"
+            SheetRow(
+                R.drawable.ic_language, "Open in browser", { onDismiss(); it() },
+                supporting = "Runs the page's scripts and may load things from the internet".takeIf { web },
+            )
+        }
         SheetRow(R.drawable.ic_open_in_new, "Open with another app", { onDismiss(); onOpenWith() })
         if (canRename && onRename != null) {
             SheetRow(R.drawable.ic_rename, "Rename", { onDismiss(); onRename() })
