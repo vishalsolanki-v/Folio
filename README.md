@@ -8,7 +8,7 @@
 
 A free Android app that opens PDFs, Word, Excel, PowerPoint, text, code, images, music, video and ZIP files, and edits the text ones. No ads, no account, and no internet permission.
 
-[![Version](https://img.shields.io/badge/version-1.0.0-1f6feb)](https://github.com/vishalsolanki-v/Folio/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.0.1-1f6feb)](https://github.com/vishalsolanki-v/Folio/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?logo=android&logoColor=white)](#download)
 [![Permissions](https://img.shields.io/badge/permissions-none-success)](#privacy-by-construction)
 [![Internet](https://img.shields.io/badge/internet-blocked-success)](#privacy-by-construction)
@@ -77,16 +77,16 @@ Folio ships as a signed APK on [GitHub Releases](https://github.com/vishalsolank
 
 | | |
 |---|---|
-| **Version** | 1.0.0 (1 November 2026) |
+| **Version** | 1.0.1 (25 November 2026) |
 | **Needs** | Android 8.0 (API 26) or newer |
 | **Size** | 24.8 MB |
-| **SHA-256** | `9d4ce51d4fd977130471f4058a7abb69fdc721a7489f4395797f937f4a0d9f17` |
+| **SHA-256** | `7bc630961b56b7fb8d23952cad773537631a124b082c006f1011c9aabd0b7da3` |
 
 Check the download before installing:
 
 ```sh
-sha256sum Folio-1.0.0.apk                    # macOS / Linux
-certutil -hashfile Folio-1.0.0.apk SHA256    # Windows
+sha256sum Folio-1.0.1.apk                    # macOS / Linux
+certutil -hashfile Folio-1.0.1.apk SHA256    # Windows
 ```
 
 Every Folio release is signed with the same key. Its certificate SHA-256 is
@@ -100,7 +100,7 @@ What changed in each version: [`CHANGELOG.md`](CHANGELOG.md).
 Apps from outside the Play Store show a few warnings the first time. Here's each one and what to tap.
 
 1. **Download the APK** on your phone. Chrome says *"File might be harmful"*. That's its standard warning for every app file, not something it found in Folio. Tap **Download anyway**. If it sits at 100%, check Chrome → Downloads, or use another browser such as Brave or Firefox.
-2. **Open it** when the download finishes, or find `Folio-1.0.0.apk` in Chrome → Downloads or Files → Downloads.
+2. **Open it** when the download finishes, or find `Folio-1.0.1.apk` in Chrome → Downloads or Files → Downloads.
 3. **Allow your browser to install apps.** The first time, Android says *"Permission required"*. Tap **Settings**, turn on **Allow from this source**, then go back. You can turn it off again afterwards.
 4. **Install.** Google Play Protect says *"App scan recommended"* because it hasn't seen Folio before. Tap **Scan app** (Google checks it, then it installs), or **More details → Install without scanning**.
 

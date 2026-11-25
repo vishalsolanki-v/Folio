@@ -3,7 +3,7 @@
 What changed in each Folio release. The newest is at the top. Each entry is also the text of its
 [GitHub release](https://github.com/vishalsolanki-v/Folio/releases).
 
-## 1.0.1 (not released yet)
+## 1.0.1 (25 November 2026)
 
 A reliability update: crash fixes, and fixes for editor cases where edits could be lost or come back. No new
 permissions, no network access, nothing collected. Install it over 1.0.0: your Recents, pins, folders and settings
