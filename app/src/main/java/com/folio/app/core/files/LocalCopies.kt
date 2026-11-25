@@ -17,13 +17,33 @@ class LocalCopies(private val root: File) {
         fun keyHash(key: String): String =
             MessageDigest.getInstance("SHA-1").digest(key.toByteArray()).joinToString("") { "%02x".format(it) }
 
+        /** Linux allows 255 bytes per file name; this leaves room for a suffix such as ".txt". */
+        const val MAX_NAME_BYTES = 200
+
         /** A display name that is safe as a single file name. */
         fun safeName(name: String): String =
-            name.substringAfterLast('/').substringAfterLast('\\')
-                .filterNot { it.isISOControl() || it in "<>:\"|?*" }
-                .trim().trimStart('.')
-                .take(120)
-                .ifEmpty { "file" }
+            fitBytes(
+                name.substringAfterLast('/').substringAfterLast('\\')
+                    .filterNot { it.isISOControl() || it in "<>:\"|?*" }
+                    .trim().trimStart('.')
+                    .ifEmpty { "file" },
+            )
+
+        /** Cuts [name] to [MAX_NAME_BYTES] of UTF-8 on whole code points, keeping a short extension. */
+        private fun fitBytes(name: String): String {
+            if (name.toByteArray().size <= MAX_NAME_BYTES) return name
+            val ext = name.substringAfterLast('.', "").takeIf { it.isNotEmpty() && it.length <= 10 }?.let { ".$it" }.orEmpty()
+            val budget = MAX_NAME_BYTES - ext.toByteArray().size
+            val base = StringBuilder()
+            var bytes = 0
+            for (cp in name.removeSuffix(ext).codePoints()) {
+                val size = String(Character.toChars(cp)).toByteArray().size
+                if (bytes + size > budget) break
+                base.appendCodePoint(cp)
+                bytes += size
+            }
+            return base.toString().trimEnd().ifEmpty { "file" } + ext
+        }
     }
 
     /**

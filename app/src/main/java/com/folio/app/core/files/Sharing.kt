@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
 
@@ -47,10 +48,19 @@ object Sharing {
         }
     }.getOrNull()
 
-    /** Our own files (copies, extracted entries) must go out through the FileProvider, never as file://. */
-    fun outgoingUri(context: Context, uri: Uri): Uri =
-        if (uri.scheme == ContentResolver.SCHEME_FILE) FileProvider.getUriForFile(context, "${context.packageName}.files", File(uri.path!!))
-        else uri
+    /**
+     * Our own files (copies, extracted entries) must go out through the FileProvider, never as file://.
+     * Null for a file:// path outside the FileProvider roots: Folio can't hand that on to another app.
+     */
+    fun outgoingUri(context: Context, uri: Uri): Uri? =
+        if (uri.scheme == ContentResolver.SCHEME_FILE) {
+            runCatching { FileProvider.getUriForFile(context, "${context.packageName}.files", File(uri.path!!)) }.getOrNull()
+        } else {
+            uri
+        }
+
+    private fun cantShare(context: Context) =
+        Toast.makeText(context, "Folio can't pass this file to another app.", Toast.LENGTH_SHORT).show()
 
     /** The original if it can still be opened, else the private copy, else null. */
     fun readableUri(context: Context, original: Uri, copy: File?): Uri? {
@@ -64,7 +74,7 @@ object Sharing {
 
     /** System chooser for viewing [uri] in another app; Folio's own entry points are left out. */
     fun openWith(context: Context, uri: Uri, mime: String) {
-        val out = outgoingUri(context, uri)
+        val out = outgoingUri(context, uri) ?: return cantShare(context)
         val view = Intent(Intent.ACTION_VIEW).setDataAndType(out, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         val ours = arrayOf("com.folio.app.MainActivity", "com.folio.app.ExternalOpenActivity").map { ComponentName(context, it) }
         val chooser = Intent.createChooser(view, null).putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS, ours.toTypedArray())
@@ -72,7 +82,7 @@ object Sharing {
     }
 
     fun share(context: Context, uri: Uri, mime: String, name: String) {
-        val out = outgoingUri(context, uri)
+        val out = outgoingUri(context, uri) ?: return cantShare(context)
         val send = Intent(Intent.ACTION_SEND)
             .setType(mime)
             .putExtra(Intent.EXTRA_STREAM, out)
@@ -88,7 +98,8 @@ object Sharing {
             share(context, uris.first(), "*/*", "file")
             return
         }
-        val outUris = ArrayList(uris.map { outgoingUri(context, it) })
+        val outUris = ArrayList(uris.mapNotNull { outgoingUri(context, it) })
+        if (outUris.isEmpty()) return cantShare(context)
         val send = Intent(Intent.ACTION_SEND_MULTIPLE)
             .setType("*/*")
             .putParcelableArrayListExtra(Intent.EXTRA_STREAM, outUris)
@@ -109,7 +120,7 @@ object Sharing {
         // Browsers don't register Markdown, JSON or code types, but show the same bytes fine as plain text.
         val browserMime = if (mime == "text/html" || mime == "application/xhtml+xml" || mime == "application/pdf" || mime.startsWith("image/")) mime
             else if (mime.startsWith("text/") || mime in TEXT_LIKE) "text/plain" else return null
-        val view = Intent(Intent.ACTION_VIEW).setDataAndType(outgoingUri(context, uri), browserMime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val view = Intent(Intent.ACTION_VIEW).setDataAndType(outgoingUri(context, uri) ?: return null, browserMime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         val web = Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com"))
         val default = pm.resolveActivity(web, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
         val browsers = (listOfNotNull(default) + pm.queryIntentActivities(web, 0).map { it.activityInfo.packageName }).distinct()

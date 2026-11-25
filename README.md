@@ -56,7 +56,7 @@ The full policy is in [`docs/privacy-policy.md`](docs/privacy-policy.md).
 | 📊 Spreadsheets | Excel `.xlsx`, CSV, TSV | CSV, TSV |
 | 📽️ Presentations | PowerPoint `.pptx`, with an outline view | |
 | 📝 Text and notes | TXT, Markdown, logs, subtitles, contacts `.vcf`, calendar `.ics` | ✅ |
-| 💻 Code and data | JSON, XML, YAML, HTML, and 40+ languages with syntax colours | ✅ |
+| 💻 Code and data | JSON, XML, YAML, HTML, and 25+ languages with syntax colours | ✅ |
 | 🖼️ Images | JPEG, PNG, WebP, GIF, HEIC, AVIF, SVG, BMP | |
 | 🎵 Audio and video | MP3, M4A, FLAC, WAV, Ogg, voice notes, MP4, MKV, WebM, MOV | |
 | 🗜️ Archives | ZIP: browse it and open what's inside | |
@@ -85,8 +85,15 @@ Folio ships as a signed APK on [GitHub Releases](https://github.com/vishalsolank
 Check the download before installing:
 
 ```sh
-sha256sum Folio-1.0.0.apk
+sha256sum Folio-1.0.0.apk                    # macOS / Linux
+certutil -hashfile Folio-1.0.0.apk SHA256    # Windows
 ```
+
+Every Folio release is signed with the same key. Its certificate SHA-256 is
+`19bf74536960acb7421491ba83096bf9f68ac68ea7ad5547810c557c328fe218`, so you can check that an update really comes from
+this project (for example with `apksigner verify --print-certs`, or an app such as AppVerifier).
+
+What changed in each version: [`CHANGELOG.md`](CHANGELOG.md).
 
 ### Installing
 
@@ -155,15 +162,20 @@ cd Folio
 ./gradlew assembleDebug          # app/build/outputs/apk/debug/
 ```
 
-Release builds read the signing key from a git-ignored `keystore.properties` in the project root. Without it, `assembleRelease` signs with the debug key, so you can test a release build locally. The full release checklist is in [`docs/release.md`](docs/release.md).
+Release builds read the signing key from a git-ignored `keystore.properties` in the project root. Without it, `assembleRelease` stops with an error; add `-Pfolio.debugSignedRelease` to sign a local test build with the debug key instead. The full release checklist is in [`docs/release.md`](docs/release.md).
 
 ## Project docs
 
 | File | What's in it |
 |---|---|
+| [`CHANGELOG.md`](CHANGELOG.md) | What changed in each release |
 | [`docs/plan.md`](docs/plan.md) | The original build plan, milestone by milestone |
 | [`docs/decisions.md`](docs/decisions.md) | Every deviation from the plan, one line each, with the reason |
 | [`docs/release.md`](docs/release.md) | How to cut a release, plus the Play Store draft |
+| [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) | The quality gate every release must pass |
+| [`docs/AUDIT.md`](docs/AUDIT.md) | The November 2026 code and product audit, with every finding |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | What's planned next, in priority order |
+| [`docs/TEST_MATRIX.md`](docs/TEST_MATRIX.md) | Test scenarios, and which are automated |
 | [`docs/privacy-policy.md`](docs/privacy-policy.md) | The privacy policy |
 
 ## Questions
@@ -172,7 +184,7 @@ Release builds read the signing key from a git-ignored `keystore.properties` in 
 Publishing there needs a paid developer account. Folio may go there later. Until then, [the Folio page](https://www.vishalsolanki.online/apps/folio) and this repository are the only official places to get it.
 
 **How do I know it's safe?**
-Folio has no internet permission, so it can't send anything anywhere. Check *Settings → Apps → Folio → Permissions* on your phone: it shows none. Each release lists its SHA-256 checksum so you can confirm your download matches. And the code is all here.
+Folio has no internet permission, so it can't send anything anywhere. Check *Settings → Apps → Folio → Permissions* on your phone: it shows none. Each release lists its SHA-256 checksum so you can confirm your download matches, and every release is signed with the same certificate (fingerprint above). And the code is all here.
 
 **Can it edit Word, Excel or PowerPoint files?**
 No. It shows them, but editing would risk breaking their layout, so they're view-only. Text, Markdown, CSV, code and web pages can be edited and saved.

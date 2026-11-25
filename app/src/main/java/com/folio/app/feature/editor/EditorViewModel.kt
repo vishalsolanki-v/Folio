@@ -44,6 +44,8 @@ sealed interface EditorUiState {
         val askSaveCopy: Boolean = false,
         /** Increments on every successful save so the viewer behind can reload. */
         val savedCount: Int = 0,
+        /** The user chose Save when closing, and that save went through: leave the editor. */
+        val closeRequested: Boolean = false,
     ) : EditorUiState
 }
 
@@ -57,6 +59,21 @@ class EditorViewModel(private val container: AppContainer, handle: SavedStateHan
     private var key = route.uri
     var liveText: String? = null
         private set
+
+    /** Draft saves and deletes run one at a time, in order, so a late save can't bring back a deleted draft. */
+    private val draftIo = Dispatchers.IO.limitedParallelism(1)
+
+    /** Bumps on every edit, so a save can tell whether the user kept typing while it ran. */
+    private var revision = 0
+
+    /** After Discard nothing may write a draft again, not even the ON_STOP of the closing screen. */
+    private var discarded = false
+
+    /** Close the editor once the pending save succeeds (Save in the "Discard changes?" dialog). */
+    private var closeWhenSaved = false
+
+    /** The text to write when the "Save as" picker returns, captured when Save was tapped. */
+    private var pendingCopyText: String? = null
 
     private val _state = MutableStateFlow<EditorUiState>(EditorUiState.Loading)
     val state: StateFlow<EditorUiState> = _state
@@ -90,32 +107,50 @@ class EditorViewModel(private val container: AppContainer, handle: SavedStateHan
         ready { if (it.dirty) it else it.copy(dirty = true) }
     }
 
-    fun markDirty() = ready { if (it.dirty) it else it.copy(dirty = true) }
+    fun markDirty() {
+        revision++
+        ready { if (it.dirty) it else it.copy(dirty = true) }
+    }
 
     fun dismissEarlierDraft(restored: Boolean, draftText: String? = null) {
         if (restored && draftText != null) liveText = draftText
+        if (restored) revision++
         ready { it.copy(earlierDraft = null, dirty = it.dirty || restored) }
-        if (!restored) viewModelScope.launch(Dispatchers.IO) { drafts.delete(key) }
+        if (!restored) viewModelScope.launch(draftIo) { drafts.delete(key) }
     }
 
     fun writeDraft(text: String) {
+        if (discarded) return
         liveText = text
-        viewModelScope.launch(Dispatchers.IO) { drafts.save(key, text) }
+        viewModelScope.launch(draftIo) { drafts.save(key, text) }
     }
 
     fun discard() {
+        discarded = true
         liveText = null
-        viewModelScope.launch(Dispatchers.IO) { drafts.delete(key) }
+        ready { it.copy(dirty = false) }
+        viewModelScope.launch(draftIo) { drafts.delete(key) }
     }
 
     fun messageShown() = ready { it.copy(message = null) }
-    fun dismissValidation() = ready { it.copy(validationError = null) }
+    fun dismissValidation() {
+        closeWhenSaved = false
+        ready { it.copy(validationError = null) }
+    }
     fun saveCopyHandled() = ready { it.copy(askSaveCopy = false) }
+    fun saveCopyCancelled() {
+        pendingCopyText = null
+        closeWhenSaved = false
+    }
 
-    /** Saves over the file when allowed, otherwise asks for "Save copy". Validates JSON/XML unless [force]. */
-    fun save(text: String, force: Boolean = false) {
+    /**
+     * Saves over the file when allowed, otherwise asks for "Save copy". Validates JSON/XML unless [force].
+     * With [closeAfter], the editor closes once the save (or the copy) succeeds.
+     */
+    fun save(text: String, force: Boolean = false, closeAfter: Boolean = false) {
         val s = _state.value as? EditorUiState.Ready ?: return
         if (s.saving) return
+        if (closeAfter) closeWhenSaved = true
         if (!force) {
             Validation.check(text, s.file.extension, s.file.mime)?.let { error ->
                 ready { it.copy(validationError = error) }
@@ -124,9 +159,11 @@ class EditorViewModel(private val container: AppContainer, handle: SavedStateHan
         }
         ready { it.copy(validationError = null) }
         if (!s.file.writable) {
+            pendingCopyText = text
             ready { it.copy(askSaveCopy = true) }
             return
         }
+        val savedRevision = revision
         ready { it.copy(saving = true) }
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
@@ -134,33 +171,55 @@ class EditorViewModel(private val container: AppContainer, handle: SavedStateHan
             }
             when (result) {
                 SaveResult.Saved -> {
-                    withContext(Dispatchers.IO) { drafts.delete(key) }
-                    ready { it.copy(saving = false, dirty = false, message = "Saved", savedCount = it.savedCount + 1) }
+                    val typedMeanwhile = revision != savedRevision
+                    if (!typedMeanwhile) withContext(draftIo) { drafts.delete(key) }
+                    ready {
+                        it.copy(
+                            saving = false,
+                            dirty = typedMeanwhile,
+                            message = "Saved",
+                            savedCount = it.savedCount + 1,
+                            closeRequested = closeWhenSaved && !typedMeanwhile,
+                        )
+                    }
                 }
                 is SaveResult.Failed -> {
                     writeDraft(text)
+                    pendingCopyText = text
                     ready { it.copy(saving = false, message = "Folio couldn't save over this file. Your changes are safe.", askSaveCopy = true) }
                 }
             }
         }
     }
 
-    /** Writes [text] to a new document the user picked, then continues editing that one. */
-    fun saveCopy(target: Uri, text: String) {
+    /**
+     * Writes the edited text to a new document the user picked, then continues editing that one. The text is the
+     * one captured when Save was tapped; if Folio was recreated behind the picker, it's the draft written as Folio
+     * went to the background. [fallbackText] (the editor's text now) is the last resort.
+     */
+    fun saveCopy(target: Uri, fallbackText: String) {
         val s = _state.value as? EditorUiState.Ready ?: return
+        val savedRevision = revision
         ready { it.copy(saving = true) }
         viewModelScope.launch {
             val context = container.context
+            val text = pendingCopyText ?: withContext(draftIo) { drafts.load(key) } ?: fallbackText
+            pendingCopyText = null
             val result = withContext(Dispatchers.IO) {
                 FileSaver.overwrite(ContentUriTarget(context.contentResolver, target), TextCodec.encode(s.doc, text), saveDir)
             }
             if (result !is SaveResult.Saved) {
+                closeWhenSaved = false
                 ready { it.copy(saving = false, message = "Folio couldn't save the copy. Your changes are safe.") }
                 return@launch
             }
+            val typedMeanwhile = revision != savedRevision
             UriAccess.persist(context, target)
             val copy = container.fileResolver.resolve(target).getOrNull()
-            withContext(Dispatchers.IO) { drafts.delete(key) }
+            if (!typedMeanwhile) {
+                withContext(draftIo) { drafts.delete(key) }
+                liveText = text // the editor re-opens on the copy with exactly what was saved
+            }
             if (copy != null) {
                 key = target.toString()
                 container.library.recordOpen(
@@ -170,10 +229,12 @@ class EditorViewModel(private val container: AppContainer, handle: SavedStateHan
             ready {
                 it.copy(
                     file = copy ?: it.file,
+                    earlierDraft = null,
                     saving = false,
-                    dirty = false,
+                    dirty = typedMeanwhile,
                     message = "Saved a copy",
                     savedCount = it.savedCount + 1,
+                    closeRequested = closeWhenSaved && !typedMeanwhile,
                 )
             }
         }
