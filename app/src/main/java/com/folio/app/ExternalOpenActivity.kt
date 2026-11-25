@@ -1,5 +1,6 @@
 package com.folio.app
 
+import android.content.ContentResolver
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -49,7 +50,7 @@ class ExternalOpenActivity : ComponentActivity() {
         // The system "Open with" sheet hides the sender (referrer is null), so fall back to the URI's authority.
         fun source(uri: Uri?) = referrer?.host?.takeIf { it != packageName } ?: uri?.authority
         val type = intent.type
-        return when (intent.action) {
+        val start = when (intent.action) {
             Intent.ACTION_SEND -> {
                 val stream = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
                     ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
@@ -68,6 +69,19 @@ class ExternalOpenActivity : ComponentActivity() {
             }
             else -> intent.data?.let { Viewer(it.toString(), type, source(it)) }
         }
+        val incoming = when (start) {
+            is Viewer -> listOf(start.uri).takeIf { start.record } // shared text is our own cache file, made above
+            is SharedFiles -> start.uris
+            else -> null
+        }
+        return start.takeIf { incoming.orEmpty().none { isOwnPrivateFile(Uri.parse(it)) } }
+    }
+
+    /** Another app must not get Folio to show (and then share on) Folio's own private files, such as drafts. */
+    private fun isOwnPrivateFile(uri: Uri): Boolean {
+        if (uri.scheme != ContentResolver.SCHEME_FILE) return false
+        val path = uri.path ?: return true
+        return runCatching { File(path).canonicalPath.startsWith(File(applicationInfo.dataDir).canonicalPath + File.separator) }.getOrDefault(true)
     }
 
     /**
@@ -77,7 +91,9 @@ class ExternalOpenActivity : ComponentActivity() {
     private fun sharedTextFile(intent: Intent): File? {
         val text = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()?.takeIf { it.isNotEmpty() } ?: return null
         val name = intent.getStringExtra(Intent.EXTRA_SUBJECT)?.let(LocalCopies::safeName)?.removeSuffix(".txt") ?: "Shared text"
-        val dir = File(cacheDir, "shared_text/${LocalCopies.keyHash(text)}").apply { mkdirs() }
-        return File(dir, "$name.txt").apply { if (!exists()) writeText(text) }
+        return runCatching {
+            val dir = File(cacheDir, "shared_text/${LocalCopies.keyHash(text)}").apply { mkdirs() }
+            File(dir, "$name.txt").apply { if (!exists()) writeText(text) }
+        }.getOrNull() // e.g. a full disk: show "nothing to open" rather than crash
     }
 }

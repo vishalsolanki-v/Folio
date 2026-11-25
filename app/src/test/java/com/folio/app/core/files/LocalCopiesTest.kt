@@ -4,6 +4,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -38,6 +39,21 @@ class LocalCopiesTest {
         assertEquals("evil.txt", LocalCopies.safeName("..\\evil.txt"))
         assertEquals("file", LocalCopies.safeName(".."))
         assertEquals("ab.pdf", LocalCopies.safeName("a\u0000b.pdf"))
+    }
+
+    @Test fun longNonLatinNamesFitTheFileSystemAndKeepTheExtension() {
+        for (name in listOf("字".repeat(200) + ".pdf", "नमस्ते".repeat(60) + ".docx", "😀".repeat(100), "a".repeat(300) + ".txt")) {
+            val safe = LocalCopies.safeName(name)
+            assertTrue("${safe.toByteArray().size} bytes: $safe", safe.toByteArray().size <= LocalCopies.MAX_NAME_BYTES)
+            assertEquals(name.substringAfterLast('.', ""), safe.substringAfterLast('.', ""))
+            assertEquals(safe, String(safe.toByteArray())) // never splits a surrogate pair
+        }
+        assertEquals("Invoice.pdf", LocalCopies.safeName("Invoice.pdf"))
+    }
+
+    @Test fun storesCopyWithLongNonLatinName() {
+        val copies = LocalCopies(tmp.root)
+        assertNotNull(copies.store("content://whatsapp/2", "字".repeat(200) + ".pdf", "x".byteInputStream()))
     }
 
     @Test fun evictsLeastRecentlyUsedButKeepsPinned() {

@@ -73,13 +73,15 @@ android {
         applicationId = "online.vishalsolanki.folio"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // The Play upload key lives outside git: keystore.properties (storeFile, storePassword, keyAlias, keyPassword).
-    // Without it, release builds are signed with the debug key so they can be installed and tested locally.
+    // The release key lives outside git: keystore.properties (storeFile, storePassword, keyAlias, keyPassword).
+    // An APK signed with any other key can't update installed copies, so without it the release build fails (see
+    // the check below). -Pfolio.debugSignedRelease signs a local test build with the debug key instead.
+    val debugSignedRelease = providers.gradleProperty("folio.debugSignedRelease").isPresent
     val keystoreProps = rootProject.file("keystore.properties").takeIf { it.exists() }?.let { f -> Properties().apply { f.inputStream().use(::load) } }
     signingConfigs {
         if (keystoreProps != null) {
@@ -94,7 +96,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug").takeIf { debugSignedRelease }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -108,6 +110,26 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    // No Google-encrypted dependency report in the APK: it's opaque to users and F-Droid rejects it.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+}
+
+// Fail fast rather than build a release APK that can't update anyone's install.
+val releaseKeyMissing = !rootProject.file("keystore.properties").exists() && !providers.gradleProperty("folio.debugSignedRelease").isPresent
+tasks.named { it == "preReleaseBuild" }.configureEach {
+    val missing = releaseKeyMissing
+    doFirst {
+        if (missing) {
+            throw GradleException(
+                "No release key: add keystore.properties (see docs/release.md), " +
+                    "or pass -Pfolio.debugSignedRelease to sign a local test build with the debug key.",
+            )
+        }
     }
 }
 

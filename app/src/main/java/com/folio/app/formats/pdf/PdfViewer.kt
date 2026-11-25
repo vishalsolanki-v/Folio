@@ -153,7 +153,7 @@ private sealed interface PdfLoad {
 
 private const val MAX_ZOOM = 4f
 private const val MAX_RENDER_WIDTH = 4096
-private const val MAX_RENDER_PIXELS = 8_000_000 // ~32 MB per page bitmap; zoomed pages above this get slightly soft
+internal const val MAX_RENDER_PIXELS = 8_000_000 // ~32 MB per page bitmap; zoomed pages above this get slightly soft
 
 @OptIn(FlowPreview::class)
 @Composable
@@ -323,13 +323,17 @@ private fun PdfPage(
     }
 }
 
-/** Width to render a page at for [zoom], capped so one page bitmap stays under [MAX_RENDER_PIXELS]. */
-private fun renderWidth(baseWidth: Int, zoom: Float, size: PageSize): Int {
-    if (zoom < 1.2f) return baseWidth
+/**
+ * Width to render a page at for [zoom], capped at every zoom so one page bitmap stays under [MAX_RENDER_PIXELS].
+ * Tall pages (receipts, web pages saved as one page) get a narrower, slightly soft bitmap instead of crashing the
+ * app with "Canvas: trying to draw too large bitmap".
+ */
+internal fun renderWidth(baseWidth: Int, zoom: Float, size: PageSize): Int {
+    val byPixels = sqrt(MAX_RENDER_PIXELS * size.aspect).toInt().coerceAtLeast(1)
+    if (zoom < 1.2f) return minOf(baseWidth, byPixels)
     val wanted = (baseWidth * zoom).toInt().coerceAtMost(MAX_RENDER_WIDTH)
-    val byPixels = sqrt(MAX_RENDER_PIXELS * size.aspect).toInt()
     // Round down to 256 px steps so small zoom changes reuse the same cached render.
-    return (minOf(wanted, byPixels) / 256 * 256).coerceAtLeast(baseWidth)
+    return minOf((wanted / 256 * 256).coerceAtLeast(baseWidth), byPixels)
 }
 
 private fun maxPan(widthPx: Int, zoom: Float) = widthPx * (zoom - 1) / 2f

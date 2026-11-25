@@ -47,8 +47,8 @@ Everything below is a draft for the owner to review. Nothing has been uploaded.
    ```
 3. Use **Play App Signing** (default for new apps): Google holds the app signing key, you keep the upload key.
 
-Without `keystore.properties`, release builds are signed with the debug key so they can be tested locally. Those
-builds must not be uploaded.
+Without `keystore.properties`, release builds fail. For a local test build, pass `-Pfolio.debugSignedRelease` to sign
+with the debug key instead. Those builds must never be uploaded or published: they can't update anyone's install.
 
 ## 3. Build
 

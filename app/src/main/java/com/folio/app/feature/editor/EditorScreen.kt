@@ -32,7 +32,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -95,17 +94,18 @@ private fun ReadyEditor(vm: EditorViewModel, s: EditorUiState.Ready, onClose: ()
     var editor by remember { mutableStateOf<CodeEditor?>(null) }
     var history by remember { mutableIntStateOf(0) } // bumps on edits so Undo/Redo enablement recomposes
     var confirmClose by remember { mutableStateOf(false) }
-    var closeOnSave by rememberSaveable { mutableStateOf(false) }
     var preview by remember { mutableStateOf(false) }
     val canPreview = s.file.family == FileFamily.MARKDOWN || s.file.family == FileFamily.HTML
     val state by rememberUpdatedState(s)
     // Keep the editor's input key stable during typing. SoraText recreates its AndroidView when this changes.
     // A fresh composition (such as after rotation) can still seed from the ViewModel's recent text snapshot.
     val editorInitialText = remember(s.file.uri) { vm.liveText ?: s.doc.text }
-    fun text() = editor?.text?.toString().orEmpty()
+    // Until the editor view exists (just after rotation or process death), the latest text is the ViewModel's
+    // snapshot, never "": an empty string here would be saved or drafted over the user's work.
+    fun text() = editor?.text?.toString() ?: vm.liveText ?: s.doc.text
 
     val saveAs = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(s.file.mime)) { uri ->
-        if (uri != null) vm.saveCopy(uri, text())
+        if (uri != null) vm.saveCopy(uri, text()) else vm.saveCopyCancelled()
     }
     LaunchedEffect(s.askSaveCopy) {
         if (s.askSaveCopy) {
@@ -117,20 +117,21 @@ private fun ReadyEditor(vm: EditorViewModel, s: EditorUiState.Ready, onClose: ()
         s.message?.let { snackbar.showSnackbar(it); vm.messageShown() }
     }
     LaunchedEffect(s.savedCount) {
-        if (s.savedCount > 0) {
-            onSaved()
-            if (closeOnSave) onClose()
-        }
+        if (s.savedCount > 0) onSaved()
+    }
+    LaunchedEffect(s.closeRequested) {
+        if (s.closeRequested) onClose()
     }
 
     // Drafts: every 5 s while there are unsaved edits, and whenever the app goes to the background.
+    // Only from a live editor: before it exists there is nothing newer than the draft already on disk.
     LaunchedEffect(editor) {
         while (true) {
             delay(5_000)
-            if (state.dirty) vm.writeDraft(text())
+            if (state.dirty && editor != null) vm.writeDraft(text())
         }
     }
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { if (state.dirty) vm.writeDraft(text()) }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { if (state.dirty && editor != null) vm.writeDraft(text()) }
     LaunchedEffect(history) {
         if (history > 0 && state.dirty) {
             delay(400)
@@ -158,6 +159,7 @@ private fun ReadyEditor(vm: EditorViewModel, s: EditorUiState.Ready, onClose: ()
             )
             s.earlierDraft?.let { draft ->
                 DraftBanner(
+                    enabled = editor != null, // Restore must land in a live editor
                     onRestore = { editor?.setText(draft); vm.dismissEarlierDraft(restored = true, draftText = draft) },
                     onDiscard = { vm.dismissEarlierDraft(restored = false) },
                 )
@@ -207,7 +209,7 @@ private fun ReadyEditor(vm: EditorViewModel, s: EditorUiState.Ready, onClose: ()
             title = "Discard changes?",
             text = "Your edits to ${s.file.name} haven't been saved.",
             confirmLabel = "Save",
-            onConfirm = { confirmClose = false; closeOnSave = true; vm.save(text()) },
+            onConfirm = { confirmClose = false; vm.save(text(), closeAfter = true) },
             dismissLabel = "Keep editing",
             onDismiss = { confirmClose = false },
             neutralLabel = "Discard",
@@ -250,12 +252,12 @@ private fun EditorTopBar(
 }
 
 @Composable
-private fun DraftBanner(onRestore: () -> Unit, onDiscard: () -> Unit) {
+private fun DraftBanner(enabled: Boolean, onRestore: () -> Unit, onDiscard: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(start = Spacing.screen, end = Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
             Text("You have unsaved changes from earlier", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            TextButton(onDiscard) { Text("Discard") }
-            TextButton(onRestore) { Text("Restore") }
+            TextButton(onDiscard, enabled = enabled) { Text("Discard") }
+            TextButton(onRestore, enabled = enabled) { Text("Restore") }
         }
     }
 }
